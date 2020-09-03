@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/5.3/engine/Shopware/Components/Plugin/schema/menu.xsd">
+    <entries>
+        <entry>
+            <name>maxence Dropship</name>
+            <label lang="en">maxence Dropship</label>
+            <label lang="de">maxence Dropship</label>
+            <class>sprite-truck-box</class>
+            <parent identifiedBy="controller">Article</parent>
+            <children>
+                <entry>
+                    <name>MxcDropshipLog</name>
+                    <label lang="en">Dropship Log</label>
+                    <label lang="de">Dropship Log</label>
+                    <controller>MxcDropshipLog</controller>
+                    <action>index</action>
+                    <class>sprite-documents</class>
+                    <position>99</position>
+                </entry>
+            </children>
+        </entry>
+    </entries>
+</menu>
