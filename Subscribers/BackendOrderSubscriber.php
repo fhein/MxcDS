@@ -56,8 +56,8 @@ class BackendOrderSubscriber implements SubscriberInterface
         return [
             //            'Enlight_Controller_Action_PostDispatch_Backend_Order'          => 'onBackendOrderPostDispatch',
             //'Shopware_Modules_Order_SaveOrder_ProcessDetails'               => 'onSaveOrderProcessDetails',
-            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
-            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
+//            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
+//            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
         ];
     }
 

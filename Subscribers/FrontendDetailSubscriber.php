@@ -19,7 +19,7 @@ class FrontendDetailSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            'Shopware_Controllers_Frontend_Detail::indexAction::after' => 'onFrontendDetailIndexAfter',
+//            'Shopware_Controllers_Frontend_Detail::indexAction::after' => 'onFrontendDetailIndexAfter',
         ];
     }
 
