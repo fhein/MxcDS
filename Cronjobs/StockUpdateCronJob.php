@@ -17,12 +17,6 @@ use Throwable;
 
 class StockUpdateCronJob implements SubscriberInterface
 {
-    protected $log = null;
-
-    protected $companionPresent = null;
-
-    protected $modelManager = null;
-
     public static function getSubscribedEvents()
     {
         return [
@@ -33,6 +27,7 @@ class StockUpdateCronJob implements SubscriberInterface
     public function onStockUpdate(/** @noinspection PhpUnusedParameterInspection */ $job)
     {
         $services = MxcDropship::getServices();
+        $log = $services->get('logger');
         /** @var LoggerInterface $log */
         $result = true;
 
@@ -43,7 +38,7 @@ class StockUpdateCronJob implements SubscriberInterface
             $dropshipManager = $services->get(DropshipManager::class);
             $dropshipManager->updateStock();
         } catch (Throwable $e) {
-            $this->log->except($e, false, false);
+            $log->except($e, false, false);
             $result = false;
         }
         $end = date('d-m-Y H:i:s');
@@ -51,7 +46,7 @@ class StockUpdateCronJob implements SubscriberInterface
         $resultMsg = $result === true ? '. Success.' : '. Failure.';
         $msg = 'Update stock cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
 
-        $result === true ? $this->log->info($msg) : $this->log->err($msg);
+        $result === true ? $log->info($msg) : $log->err($msg);
 
         return $result;
     }
