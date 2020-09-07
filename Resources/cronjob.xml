@@ -34,4 +34,13 @@
         <disableOnError>false</disableOnError>
     </cronjob>
 
+    <cronjob>
+        <name>maxence Dropship - Alte Log Dateien löschen</name>
+        <action>Shopware_CronJob_MxcDropshipDeleteLogs</action>
+        <active>true</active>
+        <interval>86400</interval>
+        <disableOnError>true</disableOnError>
+    </cronjob>
+
+
 </cronjobs>

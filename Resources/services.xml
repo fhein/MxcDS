@@ -38,6 +38,12 @@
                 <tag name="shopware.event_subscriber"/>
             </service>
 
+            <service id="mxc_dropship.cronjob.delete_logs"
+                     class="MxcDropship\Cronjobs\DeleteLogsCronJob">
+                <tag name="shopware.event_subscriber"/>
+            </service>
+
+
             <service id="mxc_dropship.cronjob.tracking_data_update"
                      class="MxcDropship\Cronjobs\TrackingDataUpdateCronJob">
                 <tag name="shopware.event_subscriber"/>
