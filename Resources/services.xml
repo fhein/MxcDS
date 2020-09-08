@@ -3,53 +3,53 @@
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
 
         <services>
-            <service id="mxc_dropship.subscriber.backend_order"
+            <service id="mxcbc_dropship.subscriber.backend_order"
                      class="MxcDropship\Subscribers\BackendOrderSubscriber">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.subscriber.backend_article"
+            <service id="mxcbc_dropship.subscriber.backend_article"
                      class="MxcDropship\Subscribers\BackendArticleSubscriber">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.subscriber.frontend_detail"
+            <service id="mxcbc_dropship.subscriber.frontend_detail"
                      class="MxcDropship\Subscribers\FrontendDetailSubscriber">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.subscriber.checkout"
+            <service id="mxcbc_dropship.subscriber.checkout"
                      class="MxcDropship\Subscribers\CheckoutSubscriber">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.cronjob.price_update"
+            <service id="mxcbc_dropship.cronjob.price_update"
                      class="MxcDropship\Cronjobs\PriceUpdateCronJob">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.cronjob.stock_update"
+            <service id="mxcbc_dropship.cronjob.stock_update"
                      class="MxcDropship\Cronjobs\StockUpdateCronJob">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.cronjob.order_send"
+            <service id="mxcbc_dropship.cronjob.order_send"
                      class="MxcDropship\Cronjobs\OrderSendCronJob">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.cronjob.delete_logs"
+            <service id="mxcbc_dropship.cronjob.delete_logs"
                      class="MxcDropship\Cronjobs\DeleteLogsCronJob">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
 
-            <service id="mxc_dropship.cronjob.tracking_data_update"
+            <service id="mxcbc_dropship.cronjob.tracking_data_update"
                      class="MxcDropship\Cronjobs\TrackingDataUpdateCronJob">
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxc_dropship.subscriber.templates"
+            <service id="mxcbc_dropship.subscriber.templates"
                      class="MxcDropship\Subscribers\TemplateRegistration">
                 <argument>%mxc_dropship.plugin_dir%</argument>
                 <argument type="service" id="template"/>

@@ -42,5 +42,4 @@
         <disableOnError>true</disableOnError>
     </cronjob>
 
-
 </cronjobs>
