@@ -4,6 +4,7 @@ namespace MxcDropship\Dropship;
 
 use MxcCommons\EventManager\EventManager;
 use MxcCommons\EventManager\EventManagerAwareTrait;
+use MxcCommons\EventManager\ResponseCollection;
 use MxcCommons\Plugin\Plugin;
 use MxcCommons\Plugin\Service\DatabaseAwareTrait;
 use MxcCommons\Plugin\Service\ModelManagerAwareTrait;
@@ -23,14 +24,13 @@ class DropshipManager implements AugmentedObject
         'DropshipEventListener',
         'ArticleRegistry',
         'ApiClient',
-        'ImportClient',
         'StockInfo',
         'OrderProcessor',
         'DropshippersCompanion',
     ];
 
     protected $auto = true;
-    protected $delivery;
+    protected $mode;
 
     const NO_ERROR          = 0;
 
@@ -39,10 +39,10 @@ class DropshipManager implements AugmentedObject
     const STATUS_ERROR      = 2;
 
     // delivery modes
-    const DELIVERY_OWNSTOCK_ONLY        = 0;
-    const DELIVERY_PREFER_OWNSTOCK      = 1;
-    const DELIVERY_PREFER_DROPSHIP      = 2;
-    const DELIVERY_DROPSHIP_ONLY        = 3;
+    const MODE_OWNSTOCK_ONLY        = 0;
+    const MODE_PREFER_OWNSTOCK      = 1;
+    const MODE_PREFER_DROPSHIP      = 2;
+    const MODE_DROPSHIP_ONLY        = 3;
 
     // constants for all available modules
     const SUPPLIER_SELF     = 0;
@@ -69,7 +69,7 @@ class DropshipManager implements AugmentedObject
 
         $config = Shopware()->Config();
         $this->auto = $config->get('mxcbc_dsi_auto');
-        $this->delivery = $config->get('mxcbc_dsi_delivery');
+        $this->mode = $config->get('mxcbc_dsi_mode');
     }
 
     public function getService(int $supplierId, string $requestedName)
@@ -88,25 +88,17 @@ class DropshipManager implements AugmentedObject
         return $service;
     }
 
-    public function getStockInfo($sArticle)
+    // ask each dropship adapter about the # of items in stock
+    // $attr is an array containing all articles_attributes or compatible
+    // $stopIfAvailable will return the result of the first adapter with stock
+    public function getStockInfo(array $attr, bool $stopIfAvailable)
     {
-        // ask each dropship adapter about the # of items in stock
-        $stockData = [];
-        foreach ($this->modules as $supplierId => $module) {
-            $stockInfo = $this->getService($supplierId, 'StockInfo')->getStockInfo($sArticle);
-
-            if (empty($stockInfo)) {
-                continue;
-            }
-
-            $stockData[] = $stockInfo;
-        }
-        return $stockData;
-    }
-
-    public function getSupplierAndStock(array $sArticle)
-    {
-
+        $responses = $this->events->trigger(
+            __FUNCTION__,
+            $this,
+            [ 'attr' => $attr, 'stopIfAvailable' => $stopIfAvailable]
+        );
+        return $responses->toArray();
     }
 
     public function isAuto() {

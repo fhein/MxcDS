@@ -35,6 +35,7 @@ class DropshipModule extends ModelEntity
     // these properties are run time
     private $services;
     private $moduleClass;
+    private $attached = false;
 
     public function getSupplierId() { return $this->supplierId; }
     public function setSupplierId($supplierId) { $this->supplierId = $supplierId; }
@@ -56,5 +57,8 @@ class DropshipModule extends ModelEntity
 
     public function setModuleClass($moduleClass) { $this->moduleClass = $moduleClass; }
     public function getModuleClass() { return $this->moduleClass; }
+
+    public function isAttached() { return $this->attached; }
+    public function setAttached(bool $attached) { $this->attached = $attached; }
 }
 

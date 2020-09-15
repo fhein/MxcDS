@@ -149,19 +149,6 @@ class BackendArticleSubscriber implements SubscriberInterface
         }
     }
 
-    protected function setupArticle(&$article)
-    {
-        $settings = $this->getRegistry()->getSettings($article['Detail_id']);
-        if (! $settings) return;
-        $article['productnumber'] = $settings['productnumber'];
-        $article['productname'] = $settings['productname'];
-        $article['purchaseprice'] = $settings['purchaseprice'];
-        $article['retailprice'] = $settings['uvp'];
-        $article['instock'] = $settings['instock'];
-        $article['active'] = $settings['active'];
-        $article['preferownstock'] = $settings['preferownstock'];
-    }
-
     protected function getArticleListDecoration(int $detailId) {
         $settings = $this->getRegistry()->getSettings($detailId);
         if ($settings === false) return null;
@@ -169,7 +156,7 @@ class BackendArticleSubscriber implements SubscriberInterface
 
         if ($settings['mxcbc_dsi_ic_active'] === '0') {
             $color = 'red';
-        } elseif ($settings['mxcbc_dsi_ic_delivery'] === '1') {
+        } elseif ($settings['mxcbc_dsi_ic_mode'] === '1') {
             $color = 'orange';
         } else {
             $color = 'limegreen';
