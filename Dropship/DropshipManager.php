@@ -10,7 +10,7 @@ use MxcCommons\Plugin\Service\DatabaseAwareTrait;
 use MxcCommons\Plugin\Service\ModelManagerAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
 use MxcCommons\Stdlib\SplStack;
-use MxcDropship\Exception\DropshipManagerException;
+use MxcDropship\Exception\DropshipException;
 use MxcDropship\Models\DropshipModule;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
 
@@ -44,16 +44,13 @@ class DropshipManager implements AugmentedObject
     const MODE_PREFER_DROPSHIP      = 2;
     const MODE_DROPSHIP_ONLY        = 3;
 
-    // constants for all available modules
-    const SUPPLIER_SELF     = 0;
-    const SUPPLIER_INNOCIGS = 1;
-    const SUPPLIER_DEMO     = 2;
-
     protected $services = [];
 
     protected $modules = [];
 
     protected $sharedEvents;
+
+    protected $moduleIdsByName;
 
     public function init()
     {
@@ -64,7 +61,7 @@ class DropshipManager implements AugmentedObject
             if (! $module->isActive()) continue;
             $this->setupModule($module);
             // at this point we have a properly configured active dropship adapter module
-            $this->modules[$module->getSupplierId()] = $module;
+            $this->modules[$module->getId()] = $module;
         }
 
         $config = Shopware()->Config();
@@ -82,7 +79,7 @@ class DropshipManager implements AugmentedObject
         /** @var DropshipModule $module */
         $module = $this->modules[$supplierId];
         // handle invalid supplier id
-        if ($module === null) throw DropshipManagerException::fromInvalidModuleId($supplierId);
+        if ($module === null) throw DropshipException::fromInvalidModuleId($supplierId);
         $service = $module->getServices()->get($requestedName);
         $this->services[$supplierId][$requestedName] = $service;
         return $service;
@@ -124,44 +121,45 @@ class DropshipManager implements AugmentedObject
 
     public function updateStock()
     {
-        return $this->events->trigger(__FUNCTION__, $this);
+        $result = $this->events->trigger(__FUNCTION__, $this);
+        return $result->toArray();
     }
 
     protected function setupModule(DropshipModule $module)
     {
-        $supplierId = $module->getSupplierId();
+        $supplierId = $module->getId();
         if (isset($this->modules[$supplierId])) {
-            throw DropshipManagerException::fromDuplicateModuleId($supplierId);
+            throw DropshipException::fromDuplicateModuleId($supplierId);
         }
 
         $v = $module->getName();
         if ($v === null || ! is_string($v)) {
-            throw DropshipManagerException::fromInvalidConfig('name', $v);
+            throw DropshipException::fromInvalidConfig('name', $v);
         }
 
         $v = $module->getSupplier();
         if ($v === null || ! is_string($v)) {
-            throw DropshipManagerException::fromInvalidConfig('name', $v);
+            throw DropshipException::fromInvalidConfig('name', $v);
         }
 
         $plugin = $module->getPlugin();
         if ($plugin === null || ! is_string($plugin)) {
-            throw DropshipManagerException::fromInvalidConfig('plugin', $v);
+            throw DropshipException::fromInvalidConfig('plugin', $v);
         }
 
         // do not register adapters which are not present and active or do not comply to our standards
         $pluginClass = $plugin . '\\' . $plugin;
         if (! class_exists($pluginClass)) {
-            throw DropshipManagerException::fromInvalidModule(DropshipManagerException::MODULE_CLASS_EXIST, $plugin);
+            throw DropshipException::fromInvalidModule(DropshipException::MODULE_CLASS_EXIST, $plugin);
         }
         if (! is_a($pluginClass, Plugin::class, true)) {
-            throw DropshipManagerException::fromInvalidModule(DropshipManagerException::MODULE_CLASS_IDENTITY, $plugin);
+            throw DropshipException::fromInvalidModule(DropshipException::MODULE_CLASS_IDENTITY, $plugin);
         }
         if (!$this->db->fetchOne('SELECT active FROM s_core_plugins WHERE name = ?', [$plugin])) {
-            throw DropshipManagerException::fromInvalidModule(DropshipManagerException::MODULE_CLASS_INSTALLED, $plugin);
+            throw DropshipException::fromInvalidModule(DropshipException::MODULE_CLASS_INSTALLED, $plugin);
         }
         if (! method_exists($pluginClass, 'getServices')) {
-            throw DropshipManagerException::fromInvalidModule(DropshipManagerException::MODULE_CLASS_SERVICES, $plugin);
+            throw DropshipException::fromInvalidModule(DropshipException::MODULE_CLASS_SERVICES, $plugin);
         }
 
         $module->setModuleClass($pluginClass);
@@ -171,11 +169,21 @@ class DropshipManager implements AugmentedObject
         // check if all required dropship modules are available
         foreach ($this->moduleServices as $moduleService) {
             if (! $services->has($moduleService)) {
-                throw DropshipManagerException::fromMissingModuleService($moduleService);
+                throw DropshipException::fromMissingModuleService($moduleService);
             }
         }
         // enable dropship module event listening
         $listener = $services->get('DropshipEventListener');
         $listener->attach($this->events->getSharedManager());
+    }
+
+    public function getSupplierIdByName(string $moduleName)
+    {
+        $id = @$this->moduleIdsByName[$moduleName];
+        if ($id !== null) return $id;
+        $module = $this->modelManager->getRepository(DropshipModule::class)->findOneBy(['name' => $moduleName]);
+        $id = $module->getId();
+        $this->moduleIdsByName[$moduleName] = $id;
+        return $id;
     }
 }

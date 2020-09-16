@@ -17,9 +17,6 @@ class DropshipModule extends ModelEntity
     use PrimaryKeyTrait;
     use TrackCreationAndUpdateTrait;
 
-    /** @ORM\Column(name="supplier_id", type="integer", nullable=false) */
-    private $supplierId;
-
     /** @ORM\Column(type="string", nullable=false) */
     private $supplier;
 
@@ -36,9 +33,6 @@ class DropshipModule extends ModelEntity
     private $services;
     private $moduleClass;
     private $attached = false;
-
-    public function getSupplierId() { return $this->supplierId; }
-    public function setSupplierId($supplierId) { $this->supplierId = $supplierId; }
 
     public function getSupplier() { return $this->supplier; }
     public function setSupplier($supplier) { $this->supplier = $supplier; }

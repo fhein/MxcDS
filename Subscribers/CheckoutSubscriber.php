@@ -51,11 +51,11 @@ class CheckoutSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-//            'Shopware_Controllers_Frontend_Checkout::ajaxCartAction::after'           => 'onFrontendCheckoutAjaxCartAfter',
-//            'Shopware_Controllers_Frontend_Checkout::ajaxAddArticleCartAction::after' => 'onFrontendCheckoutAjaxAddArticleCartAfter',
-//            'Shopware_Controllers_Frontend_Checkout::cartAction::after'               => 'onFrontendCheckoutCartAfter',
-//            'Shopware_Controllers_Frontend_Checkout::confirmAction::after'            => 'onFrontendCheckoutConfirmAfter',
-//            'sBasket::sCheckBasketQuantities::replace'                                => 'onCheckBasketQuantitiesReplace',
+            'Shopware_Controllers_Frontend_Checkout::ajaxCartAction::after'           => 'onFrontendCheckoutAjaxCartAfter',
+            'Shopware_Controllers_Frontend_Checkout::ajaxAddArticleCartAction::after' => 'onFrontendCheckoutAjaxAddArticleCartAfter',
+            'Shopware_Controllers_Frontend_Checkout::cartAction::after'               => 'onFrontendCheckoutCartAfter',
+            'Shopware_Controllers_Frontend_Checkout::confirmAction::after'            => 'onFrontendCheckoutConfirmAfter',
+            'sBasket::sCheckBasketQuantities::replace'                                => 'onCheckBasketQuantitiesReplace',
         ];
     }
 
@@ -69,7 +69,7 @@ class CheckoutSubscriber implements SubscriberInterface
         foreach ($sBasket['content'] as $idx => $item) {
             $sArticle = $item['additional_details'];
             if (isset($item['instock'])) {
-                $stockInfo = $this->dropshipManager->getStockInfo($sArticle);
+                $stockInfo = $this->dropshipManager->getStockInfo($sArticle, false);
                 if (! empty($stockInfo)) {
                     $sBasket['content'][$idx]['instock'] = max(array_column($stockInfo, 'instock'));
                 }
@@ -82,21 +82,23 @@ class CheckoutSubscriber implements SubscriberInterface
     public function onFrontendCheckoutAjaxAddArticleCartAfter(Enlight_Hook_HookArgs $args)
     {
         $this->log->debug('Event: onFrontendCheckoutAjaxAddArticleCartAfter');
-        // Get basketmessage
-        $view = $args->getSubject()->View();
+        $subject = $args->getSubject();
+        $view = $subject->View();
+        $request = $subject->Request();
 
-        $productNumber = $args->getSubject()->Request()->getParam('sAdd');
-        $quantity = $args->getSubject()->Request()->getParam('sQuantity');
+        $productNumber = $request->getParam('sAdd');
+        $quantity = $request->getParam('sQuantity');
 
         // Get the dc-article-attributes
-        $attributes = $this->getArticleAttributes($productNumber);
+        $attr = $this->getArticleAttributes($productNumber);
+        if ($attr['mxc_dsi_mode'] == DropshipManager::MODE_OWNSTOCK_ONLY) return;
 
-        $stockInfo = $this->dropshipManager->getStockInfo($attributes);
+        $stockInfo = $this->dropshipManager->getStockInfo($attr, false);
 
         if (! empty($stockInfo)) {
             $view->assign('basketInfoMessage', null);
             $originalInStock = $this->getArticleStock($productNumber);
-            if ($attributes['laststock'] == 1 && $attributes['instock'] <= 0) {
+            if ($attr['laststock'] == 1 && $attr['instock'] <= 0) {
                 $instock = max(array_column($stockInfo, 'instock'));
                 $this->setArticleStock($productNumber, $instock);
                 $this->basket->sAddArticle($productNumber, $quantity);
@@ -116,7 +118,7 @@ class CheckoutSubscriber implements SubscriberInterface
         foreach ($sBasket['content'] as $idx => &$item) {
             $attributes = &$item['additional_details'];
             if (isset($item['instock'])) {
-                $stockInfo = $this->dropshipManager->getStockInfo($attributes);
+                $stockInfo = $this->dropshipManager->getStockInfo($attributes, false);
                 $maxPurchase = $this->config->get('maxpurchase');
                 if (! empty($stockInfo)) {
                     $instock = strval(max(array_column($stockInfo, 'instock')));
@@ -161,7 +163,7 @@ class CheckoutSubscriber implements SubscriberInterface
         $products = [];
         foreach ($result as $product) {
             $attributes = $this->getArticleAttributes($product['ordernumber']);
-            $stockInfo = $this->dropshipManager->getStockInfo($attributes);
+            $stockInfo = $this->dropshipManager->getStockInfo($attributes, false);
             $stock = max(array_column($stockInfo, 'instock'));
             $diffStock = max($product['instock'], $stock - $product['quantity']);
             if (empty($product['active'])

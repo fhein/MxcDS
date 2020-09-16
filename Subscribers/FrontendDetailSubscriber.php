@@ -49,7 +49,7 @@ class FrontendDetailSubscriber implements SubscriberInterface
         $details = $this->getDetails($args);
         if (! $details) return;
 
-        // lazy instantiation of dropship manager, does not occur on own stock products
+        // Lazy instantiation of dropship manager, does not occur on MODE_OWNSTOCK_ONLY products
         $this->dropshipManager = MxcDropship::getServices()->get(DropshipManager::class);
 
         /** @var Detail $detail */
@@ -86,6 +86,7 @@ class FrontendDetailSubscriber implements SubscriberInterface
     }
 
     // get stock info for given detail
+    // should not be called if mxcbc_dsi_mode == MODE_OWNSTOCK_ONLY, but will work correctly anyway.
     public function getDetailStock(Detail $detail)
     {
         $detail = $this->db->fetchAll('
@@ -103,22 +104,31 @@ class FrontendDetailSubscriber implements SubscriberInterface
         $instock = $detail['instock'];
         $minPurchase = $detail['minpurchase'];
 
+        $accInstock = $instock;
+        $dsInstock = 0;
+
         $this->log->debug('Stock data');
         $this->log->debug(var_export($stockData, true));
 
+        // There could be multiple dropship adapters active for this detail
+        // returning a $stockInfo record each. $stockData contains those records.
         foreach ($stockData as $stockInfo) {
+            // for call security reasons each stockinfo contains the delivery mode
+            // in order to prevent dropship delivery if MODE_OWNSTOCK_ONLY is set for this product
             $mode = $stockInfo['mode'];
             switch (true) {
                 case $mode == DropshipManager::MODE_OWNSTOCK_ONLY:
                     return $instock;
                 case $mode != DropshipManager::MODE_DROPSHIP_ONLY:
-                    if ($lastStock * $instock >= $lastStock * $minPurchase) {
-                        return $instock;
+                    // we add stockinfo['instock'] until we exceed $minPurchase
+                    $accInstock += $stockInfo['instock'];
+                    if ($lastStock * $accInstock >= $lastStock * $minPurchase) {
+                        return $accInstock;
                     }
                     break;
                 default:
-                    // dropship only mode
-                    $dsInstock = $stockInfo['instock'];
+                    // accumulate $stockInfo['instock'] until we exceed $minPurchase
+                    $dsInstock += $stockInfo['instock'];
                     if ($lastStock * $dsInstock >= $lastStock * $minPurchase) {
                         return $dsInstock;
                     }
@@ -212,12 +222,12 @@ class FrontendDetailSubscriber implements SubscriberInterface
     private function getArticleDetails($articleId) {
         return Shopware()->Db()->fetchAll('
             SELECT * FROM s_articles_details 
-            LEFT JOIN s_article_configurator_option_relations 
-                ON s_article_configurator_option_relations.article_id = s_articles_details.id
-            LEFT JOIN s_article_configurator_options 
-                ON s_article_configurator_options.id = s_article_configurator_option_relations.option_id 
-            LEFT JOIN s_articles_attributes 
-                ON s_articles_attributes.articledetailsID = s_articles_details.id 
+                LEFT JOIN s_article_configurator_option_relations 
+                    ON s_article_configurator_option_relations.article_id = s_articles_details.id
+                LEFT JOIN s_article_configurator_options 
+                    ON s_article_configurator_options.id = s_article_configurator_option_relations.option_id 
+                LEFT JOIN s_articles_attributes 
+                    ON s_articles_attributes.articledetailsID = s_articles_details.id 
             WHERE 
               s_articles_details.articleID = ?
             ', array($articleId)
