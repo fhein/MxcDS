@@ -44,7 +44,6 @@ class BackendOrderSubscriber implements SubscriberInterface
         $this->log = $services->get('logger');
         $this->dropshipManager = $services->get(DropshipManager::class);
         $this->db = Shopware()->Db();
-        $this->log->debug('BackendOrderSubscriber loaded.');
         $this->config = Shopware()->Config();
     }
 
@@ -54,59 +53,59 @@ class BackendOrderSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            //            'Enlight_Controller_Action_PostDispatch_Backend_Order'          => 'onBackendOrderPostDispatch',
-            //'Shopware_Modules_Order_SaveOrder_ProcessDetails'               => 'onSaveOrderProcessDetails',
-//            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
-//            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
+            'Enlight_Controller_Action_PostDispatch_Backend_Order'          => 'onBackendOrderPostDispatch',
+            'Shopware_Modules_Order_SaveOrder_ProcessDetails'               => 'onSaveOrderProcessDetails',
+            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
+            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
         ];
     }
 
     public function onSavePositionActionAfter(Enlight_Hook_HookArgs $args)
     {
         $this->log->debug('onSavePositionAfter');
-        $params = $args->getSubject()->Request()->getParams();
-
-        $this->db->Query('
-            UPDATE
-                s_order_details_attributes
-            SET
-                mxcbc_dsi_supplier = :supplier,
-                mxcbc_dsi_instock = :instock,
-                mxcbc_dsi_purchaseprice = :purchasePrice
-            WHERE
-                id = :id
-            ', [
-                'id'            => $params['id'],
-                'instock'       => $params['mxcbc_dsi_instock'],
-                'supplier'      => $params['mxcbc_dsi_supplier'],
-                'purchasePrice' => $params['mxcbc_dsi_purchaseprice'],
-            ]
-        );
+//        $params = $args->getSubject()->Request()->getParams();
+//
+//        $this->db->Query('
+//            UPDATE
+//                s_order_details_attributes
+//            SET
+//                mxcbc_dsi_supplier = :supplier,
+//                mxcbc_dsi_instock = :instock,
+//                mxcbc_dsi_purchaseprice = :purchasePrice
+//            WHERE
+//                id = :id
+//            ', [
+//                'id'            => $params['id'],
+//                'instock'       => $params['mxcbc_dsi_instock'],
+//                'supplier'      => $params['mxcbc_dsi_supplier'],
+//                'purchasePrice' => $params['mxcbc_dsi_purchaseprice'],
+//            ]
+//        );
     }
 
     public function onSaveActionAfter(Enlight_Hook_HookArgs $args)
     {
         $this->log->debug('onSaveActionAfter');
-        $params = $args->getSubject()->Request()->getParams();
-        $active = $params['mxcbc_dsi_active'];
-
-        if ($params['cleared'] === Status::PAYMENT_STATE_COMPLETELY_PAID) {
-            $active = $this->dropshipManager->isAuto();
-        }
-
-        $this->db->Query('
-			UPDATE
-            	s_order_attributes
-			SET
-            	mxcbc_dsi_active = :active,
-				mxcbc_dsi_status = :status
-			WHERE
-				orderID = :id
-		', [
-            'id'     => $params['id'],
-            'active' => $active,
-            'status' => $params['mxcbc_dsi_status'],
-        ]);
+//        $params = $args->getSubject()->Request()->getParams();
+//        $active = $params['mxcbc_dsi_active'];
+//
+//        if ($params['cleared'] === Status::PAYMENT_STATE_COMPLETELY_PAID) {
+//            $active = $this->dropshipManager->isAuto();
+//        }
+//
+//        $this->db->Query('
+//			UPDATE
+//            	s_order_attributes
+//			SET
+//            	mxcbc_dsi_active = :active,
+//				mxcbc_dsi_status = :status
+//			WHERE
+//				orderID = :id
+//		', [
+//            'id'     => $params['id'],
+//            'active' => $active,
+//            'status' => $params['mxcbc_dsi_status'],
+//        ]);
     }
 
     /**
@@ -149,11 +148,15 @@ class BackendOrderSubscriber implements SubscriberInterface
      */
     public function onSaveOrderProcessDetails(Enlight_Event_EventArgs $args)
     {
+        $this->log->debug('onSaveOrderProcessDetails');
         $order = $args->getSubject();
         foreach ($args->details as $idx => $item) {
+            $this->log->debug('Detail idx: '. $idx);
+            $this->log->debug('Detail data:'. var_export($item, true));
+            continue;
             $sArticle = $item['additional_details'];
             if (isset($item['instock'])) {
-                $stockInfo = $this->dropshipManager->getStockInfo($sArticle);
+                $stockInfo = $this->dropshipManager->getStockInfo($sArticle, true);
                 // If dropship stock-value has item, get the item with max instock
                 if (! empty($stockInfo)) {
                     $orderDetailsId = $item['orderDetailId'];

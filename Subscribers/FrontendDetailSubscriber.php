@@ -35,8 +35,8 @@ class FrontendDetailSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            'Enlight_Controller_Action_PreDispatch_Frontend_Detail' => 'onEnlightControllerActionPreDispatchFrontendDetail',
-            'Enlight_Controller_Action_PostDispatch_Frontend_Detail' => 'onEnlightControllerActionPostDispatchFrontendDetail',
+//            'Enlight_Controller_Action_PreDispatch_Frontend_Detail' => 'onEnlightControllerActionPreDispatchFrontendDetail',
+//            'Enlight_Controller_Action_PostDispatch_Frontend_Detail' => 'onEnlightControllerActionPostDispatchFrontendDetail',
         ];
     }
 
