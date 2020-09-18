@@ -53,13 +53,18 @@ class BackendOrderSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            'Enlight_Controller_Action_PostDispatch_Backend_Order'          => 'onBackendOrderPostDispatch',
+            'Shopware_Modules_Order_SendMail_Send'                          => 'onOrderMailSend',
+            'Shopware_Modules_Order_SaveOrder_OrderCreated'                 => 'onOrderCreated',
+            // 'Enlight_Controller_Action_PostDispatch_Backend_Order'          => 'onBackendOrderPostDispatch',
             'Shopware_Modules_Order_SaveOrder_ProcessDetails'               => 'onSaveOrderProcessDetails',
             'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
             'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
         ];
     }
 
+    // Gets triggered after a position gets saved from the positions tab of a backend order
+    // Saves GUI modified values of instock, supplier and purchasePrice
+    // **!** Probably obsolete
     public function onSavePositionActionAfter(Enlight_Hook_HookArgs $args)
     {
         $this->log->debug('onSavePositionAfter');
@@ -83,6 +88,9 @@ class BackendOrderSubscriber implements SubscriberInterface
 //        );
     }
 
+    // Gets triggered after an order was saved via the backend module
+    // Saves GUI modified values of active and status
+    // **!** Probably obsolete
     public function onSaveActionAfter(Enlight_Hook_HookArgs $args)
     {
         $this->log->debug('onSaveActionAfter');
@@ -146,13 +154,30 @@ class BackendOrderSubscriber implements SubscriberInterface
     /**
      * @param Enlight_Event_EventArgs $args
      */
-    public function onSaveOrderProcessDetails(Enlight_Event_EventArgs $args)
+    public function onOrderCreated(Enlight_Event_EventArgs $args)
     {
         $this->log->debug('onSaveOrderProcessDetails');
         $order = $args->getSubject();
         foreach ($args->details as $idx => $item) {
-            $this->log->debug('Detail idx: '. $idx);
-            $this->log->debug('Detail data:'. var_export($item, true));
+            $orderDetailId = $item['orderDetailId'];
+            $article = $item['additional_details'];
+            $supplierId = $article['mxcbc_dsi_supplier_id'];
+            // save article detail supplier id to order detail
+            $sql = '
+                UPDATE s_order_details_attributes oda 
+                SET oda.mxcbc_dsi_supplier_id = :supplierId
+                WHERE oda.detailID = :id
+            ';
+            Shopware()->Db()->executeUpdate($sql, ['supplierId' => $supplierId, 'id' => $orderDetailId]);
+
+            // @todo: Send mail to shop owner (Event:
+
+//            $this->log->debug('Detail idx: '. $idx);
+//            $this->log->debug('Detail data:'. var_export($item, true));
+//            $this->log->debug('Supplier id: ' . $supplierId);
+
+
+
             continue;
             $sArticle = $item['additional_details'];
             if (isset($item['instock'])) {
@@ -203,6 +228,13 @@ class BackendOrderSubscriber implements SubscriberInterface
                 }
             }
         }
+    }
+
+    public function onOrderMailSend(Enlight_Event_EventArgs $args)
+    {
+        // we have to return null in order for shopware mail to proceed
+        // we use this event to send our own mails to the shop owner
+        // we have to return null to let Shopware continue with default behaviour.
     }
 
     private function setOrderDetailSupplierAndStock($id, $supplierId, $instock)
