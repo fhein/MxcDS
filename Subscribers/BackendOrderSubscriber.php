@@ -12,6 +12,7 @@ use Enlight_Exception;
 use MxcCommons\Plugin\Service\Logger;
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\MxcDropship;
+use Shopware\Models\Mail\Mail;
 use Shopware_Components_Config;
 use Shopware\Models\Order\Order;
 use Enlight_Hook_HookArgs;
@@ -117,41 +118,6 @@ class BackendOrderSubscriber implements SubscriberInterface
     }
 
     /**
-     * @param $order
-     * @param array $paymentData
-     * @throws Enlight_Exception
-     */
-    protected function sendMail($order, array $paymentData): void
-    {
-        if (Shopware()->Config()->get('dc_mail_send')) {
-            $mail = Shopware()->Models()->getRepository('\Shopware\Models\Mail\Mail')->findOneBy(['name' => 'DC_ORDER']);
-            if ($mail) {
-
-                $context = [
-                    'orderNumber'   => $order->sOrderNumber,
-                    'dc_auto_order' => Shopware()->Config()->get('dc_auto_order'),
-                    'payment'       => [
-                        'name'        => $paymentData['name'],
-                        'description' => $paymentData['description'],
-                    ],
-                ];
-
-                $mail = Shopware()->TemplateMail()->createMail('DC_ORDER', $context);
-                $mail->addTo(Shopware()->Config()->get('mail'));
-
-                $dcMailRecipients = $this->getConfigCcRecipients();
-                if (! empty($dcMailRecipients)) {
-                    foreach ($dcMailRecipients as $recipient) {
-                        $mail->addCc($recipient);
-                    }
-                }
-
-                $mail->send();
-            }
-        }
-    }
-
-    /**
      * @param Enlight_Event_EventArgs $args
      */
     public function onOrderCreated(Enlight_Event_EventArgs $args)
@@ -161,131 +127,58 @@ class BackendOrderSubscriber implements SubscriberInterface
         foreach ($args->details as $idx => $item) {
             $orderDetailId = $item['orderDetailId'];
             $article = $item['additional_details'];
-            $supplierId = $article['mxcbc_dsi_supplier_id'];
+            $supplier = $article['mxcbc_dsi_supplier'];
             // save article detail supplier id to order detail
             $sql = '
                 UPDATE s_order_details_attributes oda 
-                SET oda.mxcbc_dsi_supplier_id = :supplierId
+                SET oda.mxcbc_dsi_supplier = :supplier
                 WHERE oda.detailID = :id
             ';
-            Shopware()->Db()->executeUpdate($sql, ['supplierId' => $supplierId, 'id' => $orderDetailId]);
-
-            // @todo: Send mail to shop owner (Event:
-
-//            $this->log->debug('Detail idx: '. $idx);
-//            $this->log->debug('Detail data:'. var_export($item, true));
-//            $this->log->debug('Supplier id: ' . $supplierId);
-
-
-
-            continue;
-            $sArticle = $item['additional_details'];
-            if (isset($item['instock'])) {
-                $stockInfo = $this->dropshipManager->getStockInfo($sArticle, true);
-                // If dropship stock-value has item, get the item with max instock
-                if (! empty($stockInfo)) {
-                    $orderDetailsId = $item['orderDetailId'];
-
-                    // @todo: Necessary or available already?
-                    $orderId = $this->getOrderIdByOrderDetailsId(
-                        $orderDetailsId,
-                        $item['ordernumber']
-                    );
-
-                    // get supplier with the biggest stock
-                    // @todo: This is nasty in many ways: Why the biggest stock?
-                    // @todo: Implement getSupplier(productId) instead, returning the according supplierId and stock
-                    $supplierId = null;
-                    $maxStock = max(array_column($stockInfo, 'instock'));
-                    foreach ($stockInfo as $stock) {
-                        if ($maxStock === $stock['instock']) {
-                            $supplierId = $stock['supplierId'];
-                            break;
-                        }
-                    }
-                    $this->setOrderDetailSupplierAndStock($orderDetailsId, $supplierId, $maxStock);
-
-                    // @todo: Pickware support
-                    if ($this->dropshipManager->isAuto()) {
-                        $this->adjustArticleDetailStockAndSales($item['quantity'], $item['ordernumber']);
-                    }
-
-                    // @todo: this needs to be called once only, not throughout the loop
-                    $this->setDropshipOrder($orderId);
-                    $admin = Shopware()->Modules()->Admin();
-
-                    // @todo: The payment data is equal for all positions, so this has to move out of the loop
-                    if (! empty($order->sUserData['additional']['payment']['id'])) {
-                        $paymentId = $order->sUserData['additional']['payment']['id'];
-                    } else {
-                        $paymentId = $order->sUserData['additional']['user']['paymentID'];
-                    }
-                    $userData = $admin->sGetUserData();
-                    $paymentData = $admin->sGetPaymentMeanById($paymentId, $userData);
-
-                    // @todo: This will send a mail for each order position which is bullshit
-                    $this->sendMail($order, $paymentData);
-                }
-            }
+            Shopware()->Db()->executeUpdate($sql,
+                [ 'supplier' => 'InnoCigs', 'id' => $orderDetailId]);
         }
     }
 
     public function onOrderMailSend(Enlight_Event_EventArgs $args)
     {
-        // we have to return null in order for shopware mail to proceed
-        // we use this event to send our own mails to the shop owner
-        // we have to return null to let Shopware continue with default behaviour.
+        $context = $args->context;
+        $context = $this->getOrderInfos($context);
+        /** @var Mail $dsMail */
+        $dsMail = Shopware()->Models()->getRepository(Mail::class)->findOneBy(['name' => 'sMxcOrder']);
+        if ($dsMail) {
+            /** @var \Enlight_Components_Mail $dsMail */
+            $dsMail = Shopware()->TemplateMail()->createMail('sMxcDsiOrder', $context);
+            $dsMail->addTo('support@vapee.de');
+            $dsMail->clearFrom();
+            $dsMail->setFrom('info@vapee.de', 'vapee.de Dropship');
+            $dsMail->send();
+        }
+        // Because this is a notifyUntil Event we have to return something falsish if we want Shopware to proceed as default
+        // If we would return something different from false, Shopware would not send an order confirmation to the customer
+        return null;
     }
 
-    private function setOrderDetailSupplierAndStock($id, $supplierId, $instock)
+    public function getOrderInfos(array $context)
     {
-        return Shopware()->Db()->Query('
-            UPDATE
-                s_order_details_attributes
-            SET
-                mxcbc_dsi_supplier = :supplierId,
-                mxcbc_dsi_instock = :instock
-            WHERE
-                detailID = :id
-        ', [
-            'id'         => $id,
-            'supplierId' => $supplierId,
-            'instock'    => $instock,
-        ]);
+        $orderType = 0;
+        foreach ($context['sOrderDetails'] as &$detail) {
+            if (! isset($detail['additional_details']['mxcbc_dsi_supplier'])) continue;
+            $supplier = $detail['additional_details']['mxcbc_dsi_supplier'];
+            if ($supplier === null) {
+                $detail['additional_details']['mxcbc_dsi_supplier'] = 'vapee.de';
+                $orderType |= 1;
+            } else {
+                $orderType |= 2;
+            }
+        }
+        // $orderType values to use in email template
+        //      0: can not occur, we do not check this error condition
+        //      1: only products from own stock
+        //      2: only products from dropship partner(s)
+        //      3: products from both own stock and dropship partners
+        $context['mxcbc_dsi']['orderType'] = $orderType;
+        return $context;
     }
-
-    private function adjustArticleDetailStockAndSales(string $productNumber, int $quantity)
-    {
-        Shopware()->Db()->Query('
-            UPDATE 
-                s_articles_details
-            SET sales = sales - :quantity,
-                instock = instock + :quantity
-            WHERE 
-                ordernumber = :number
-            ', [
-                'quantity' => $quantity,
-                'number'   => $productNumber,
-            ]
-        );
-    }
-
-    private function setDropshipOrder($orderId)
-    {
-
-        return Shopware()->Db()->Query('
-          UPDATE
-            s_order_attributes
-          SET
-            dc_dropship_active = :active
-          WHERE
-            orderID = :id
-        ', [
-            'id'     => $orderId,
-            'active' => 1,
-        ]);
-    }
-
 
     // this is the backend gui
     public function onBackendOrderPostDispatch(Enlight_Event_EventArgs $args)

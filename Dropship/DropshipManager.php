@@ -61,7 +61,7 @@ class DropshipManager implements AugmentedObject
             if (! $module->isActive()) continue;
             $this->setupModule($module);
             // at this point we have a properly configured active dropship adapter module
-            $this->modules[$module->getId()] = $module;
+            $this->modules[$module->getName()] = $module;
         }
 
         $config = Shopware()->Config();
@@ -69,19 +69,19 @@ class DropshipManager implements AugmentedObject
         $this->mode = $config->get('mxcbc_dsi_mode');
     }
 
-    public function getService(int $supplierId, string $requestedName)
+    public function getService(string $supplier, string $requestedName)
     {
         // return from cache if available
-        $service = @$this->services[$supplierId][$requestedName];
+        $service = @$this->services[$supplier][$requestedName];
         if ($service !== null) return $service;
 
         // retrieve service from service manager
         /** @var DropshipModule $module */
-        $module = $this->modules[$supplierId];
+        $module = $this->modules[$supplier];
         // handle invalid supplier id
-        if ($module === null) throw DropshipException::fromInvalidModuleId($supplierId);
+        if ($module === null) throw DropshipException::fromUnregisteredModule($supplier);
         $service = $module->getServices()->get($requestedName);
-        $this->services[$supplierId][$requestedName] = $service;
+        $this->services[$supplier][$requestedName] = $service;
         return $service;
     }
 
@@ -105,9 +105,9 @@ class DropshipManager implements AugmentedObject
     public function processOrder(array $order)
     {
         $details = $order['details'];
-        $supplierIds = array_unique(array_column($details, 'mxcbc_dsi_suppliers'));
-        foreach ($supplierIds as $supplierId) {
-            $processor = $this->getService($supplierId, 'OrderProcessor');
+        $suppliers = array_unique(array_column($details, 'mxcbc_dsi_suppliers'));
+        foreach ($suppliers as $supplier) {
+            $processor = $this->getService($supplier, 'OrderProcessor');
             $processor->processOrder($order);
         }
     }
@@ -127,9 +127,9 @@ class DropshipManager implements AugmentedObject
 
     protected function setupModule(DropshipModule $module)
     {
-        $supplierId = $module->getId();
-        if (isset($this->modules[$supplierId])) {
-            throw DropshipException::fromDuplicateModuleId($supplierId);
+        $supplier = $module->getName();
+        if (isset($this->modules[$supplier])) {
+            throw DropshipException::fromDuplicateModule($supplier);
         }
 
         $v = $module->getName();
@@ -175,15 +175,5 @@ class DropshipManager implements AugmentedObject
         // enable dropship module event listening
         $listener = $services->get('DropshipEventListener');
         $listener->attach($this->events->getSharedManager());
-    }
-
-    public function getSupplierIdByName(string $moduleName)
-    {
-        $id = @$this->moduleIdsByName[$moduleName];
-        if ($id !== null) return $id;
-        $module = $this->modelManager->getRepository(DropshipModule::class)->findOneBy(['name' => $moduleName]);
-        $id = $module->getId();
-        $this->moduleIdsByName[$moduleName] = $id;
-        return $id;
     }
 }

@@ -21,7 +21,6 @@ return [
                 'mxcbc_dsi_status'     => ['type' => TypeMapping::TYPE_INTEGER],
             ],
             's_order_details_attributes' => [
-                'mxcbc_dsi_supplier_id'   => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_supplier'      => ['type' => TypeMapping::TYPE_STRING],
                 'mxcbc_dsi_dropship_id'   => ['type' => TypeMapping::TYPE_STRING],
                 'mxcbc_dsi_order_id'      => ['type' => TypeMapping::TYPE_STRING],
@@ -37,6 +36,7 @@ return [
             's_articles_attributes'      => [
                 'mxcbc_product_type' => ['type' => TypeMapping::TYPE_STRING],
                 'mxcbc_product_meta' => ['type' => TypeMapping::TYPE_INTEGER],
+                'mxcbc_flavor'       => ['type' => TypeMapping::TYPE_STRING],
 
                 // Aus welcher Quelle wird bei Bestellung geliefert?
                 //      - aus eigenem Lager                                     -> 1
@@ -47,7 +47,7 @@ return [
                     'type'         => TypeMapping::TYPE_INTEGER,
                     'defaultValue' => DropshipManager::MODE_OWNSTOCK_ONLY,
                 ],
-                'mxcbc_dsi_supplier_id' => ['type' => TypeMapping::TYPE_INTEGER],
+                'mxcbc_dsi_supplier' => ['type' => TypeMapping::TYPE_STRING],
             ],
         ],
     ],

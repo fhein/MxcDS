@@ -8,7 +8,7 @@ use RuntimeException;
 class DropshipException extends RuntimeException
 {
     // module registration and validation
-    const INVALID_MODULE_ID             = 100;
+    const UNREGISTERED_MODULE           = 100;
     const DUPLICATE_MODULE_ID           = 101;
     const INVALID_CONFIG                = 102;
     const INVALID_MODULE                = 103;
@@ -27,11 +27,12 @@ class DropshipException extends RuntimeException
     const MODULE_API_HTTP_STATUS        = 204;
     const MODULE_API_SUPPLIER_ERRORS    = 205;
 
-    protected $supplierId;
+    protected $supplier;
     protected $httpStatus;
     protected $supplierErrors;
 
     // initializers regarding module registration and validation
+
 
     public static function fromMissingModuleService(string $service) {
         $code = self::MISSING_MODULE_SERVICE;
@@ -39,15 +40,15 @@ class DropshipException extends RuntimeException
         return new self($msg, $code);
     }
 
-    public static function fromInvalidModuleId(int $id) {
-        $code = self::INVALID_MODULE_ID;
-        $msg = sprintf('Dropship module with id %u is not registered.', $id);
+    public static function fromUnregisteredModule(string $id) {
+        $code = self::UNREGISTERED_MODULE;
+        $msg = sprintf('Dropship module %s is not registered.', $id);
         return new self($msg, $code);
     }
 
-    public static function fromDuplicateModuleId(int $id) {
+    public static function fromDuplicateModule(string $id) {
         $code = self::DUPLICATE_MODULE_ID;
-        $msg = sprintf('Duplicate dropship module id %u.', $id);
+        $msg = sprintf('Duplicate dropship module %s.', $id);
         return new self($msg, $code);
     }
 
@@ -91,38 +92,47 @@ class DropshipException extends RuntimeException
 
     // initializers regarding module API
 
-    public static function fromInvalidXML(int $supplierId) {
-        $msg = 'InnoCigs API: <br/>Invalid XML data received.';
+    public static function fromInvalidXML(string $supplier)
+    {
+        $msg = sprintf('Module %s:<br/> Invalid XML data received', $supplier);
         $code = self::MODULE_API_INVALID_XML_DATA;
-
-        return new DropshipException($msg, $code);
+        $e = new DropshipException($msg, $code);
+        $e->setSupplier($supplier);
+        return $e;
     }
 
-    public static function fromJsonEncode(int $supplierId) {
-        $msg = 'InnoCigs API: <br/>Failed to encode XML data to JSON.';
+    public static function fromJsonEncode(string $supplier) {
+        $msg = sprintf('Module %s:<br/> Failed to encode XML data to JSON.', $supplier);
         $code = self::MODULE_API_JSON_ENCODE;
-        return new DropshipException($msg, $code);
+        $e = new DropshipException($msg, $code);
+        $e->setSupplier($supplier);
+        return $e;
     }
 
-    public static function fromJsonDecode(int $supplierId) {
-        $msg = 'InnoCigs API: <br/>Failed to decode JSON data.';
+    public static function fromJsonDecode(string $supplier) {
+        $msg = sprintf('Module %s:<br/>Failed to decode JSON data.', $supplier);
         $code = self::MODULE_API_JSON_DECODE;
-        return new DropshipException($msg, $code);
+        $e = new DropshipException($msg, $code);
+        $e->setSupplier($supplier);
+        return $e;
     }
 
-    public static function fromSupplierErrors(int $supplierId, array $errors) {
+    public static function fromSupplierErrors(string $supplier, array $errors) {
         $code = self::MODULE_API_SUPPLIER_ERRORS;
         $msg = 'Supplier API error codes available.';
         $e =  new DropshipException($msg, $code);
         $e->setSupplierErrors($errors);
+        $e->setSupplier($supplier);
         return $e;
     }
 
-    public static function fromHttpStatus(int $supplierId, int $status) {
+    public static function fromHttpStatus(string $supplier, int $status) {
         $code = $status;
         $msg = sprintf('InnoCigs API: <br\>HTTP Status: %u', $status);
         $e = new DropshipException($msg, $code);
         $e->setHttpStatus($status);
+        $e->setSupplier($supplier);
+        return $e;
     }
 
     public function setSupplierErrors(array $errors)
@@ -149,9 +159,14 @@ class DropshipException extends RuntimeException
         return $this->httpStatus;
     }
 
-    public function setHttpStatus($httpStatus): void
+    public function setHttpStatus($httpStatus)
     {
         $this->httpStatus = $httpStatus;
+    }
+
+    public function setSupplier(string $supplier)
+    {
+        $this->supplier = $supplier;
     }
 
 }
