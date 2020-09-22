@@ -5,29 +5,21 @@
 
 namespace MxcDropship\Subscribers;
 
-use Doctrine\ORM\EntityManager;
 use Enlight\Event\SubscriberInterface;
 use Enlight_Event_EventArgs;
-use Enlight_Exception;
 use MxcCommons\Plugin\Service\Logger;
 use MxcDropship\Dropship\DropshipManager;
+use MxcDropship\Jobs\SendOrders;
 use MxcDropship\MxcDropship;
 use Shopware\Models\Mail\Mail;
 use Shopware_Components_Config;
-use Shopware\Models\Order\Order;
 use Enlight_Hook_HookArgs;
-use Shopware\Models\Order\Status;
 use Enlight_Components_Db_Adapter_Pdo_Mysql;
 use Throwable;
 use sAdmin;
 
 class BackendOrderSubscriber implements SubscriberInterface
 {
-    /** @var EntityManager */
-    private $modelManager;
-
-    /** @var DropshipManager */
-    private $dropshipManager;
 
     /** @var Enlight_Components_Db_Adapter_Pdo_Mysql */
     private $db;
@@ -40,10 +32,7 @@ class BackendOrderSubscriber implements SubscriberInterface
 
     public function __construct()
     {
-        $services = MxcDropship::getServices();
-        $this->modelManager = $services->get('models');
-        $this->log = $services->get('logger');
-        $this->dropshipManager = $services->get(DropshipManager::class);
+        $this->log = MxcDropship::getServices()->get('logger');
         $this->db = Shopware()->Db();
         $this->config = Shopware()->Config();
     }
@@ -56,10 +45,8 @@ class BackendOrderSubscriber implements SubscriberInterface
         return [
             'Shopware_Modules_Order_SendMail_Send'                          => 'onOrderMailSend',
             'Shopware_Modules_Order_SaveOrder_OrderCreated'                 => 'onOrderCreated',
-            // 'Enlight_Controller_Action_PostDispatch_Backend_Order'          => 'onBackendOrderPostDispatch',
-            'Shopware_Modules_Order_SaveOrder_ProcessDetails'               => 'onSaveOrderProcessDetails',
-            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
-            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
+//            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
+//            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
         ];
     }
 
@@ -122,29 +109,52 @@ class BackendOrderSubscriber implements SubscriberInterface
      */
     public function onOrderCreated(Enlight_Event_EventArgs $args)
     {
-        $this->log->debug('onSaveOrderProcessDetails');
-        $order = $args->getSubject();
+        $this->log->debug('onOrderCreated');
+        $orderType = 0;
         foreach ($args->details as $idx => $item) {
+            $articleId = $item['articleID'];
+            if (empty($articleId)) continue;
             $orderDetailId = $item['orderDetailId'];
-            $article = $item['additional_details'];
-            $supplier = $article['mxcbc_dsi_supplier'];
-            // save article detail supplier id to order detail
+            $attr = $item['additional_details'];
+            $supplier = $attr['mxcbc_dsi_supplier'];
+            if ($supplier === null) {
+                $orderType |= 1;    // product from own stock
+                $supplier = $this->config->get('shopName');
+            } else {
+                $orderType |= 2;    // dropship product
+            }
+            // save article detail supplier and product number to order detail
             $sql = '
-                UPDATE s_order_details_attributes oda 
+                UPDATE s_order_details_attributes oda
                 SET oda.mxcbc_dsi_supplier = :supplier
                 WHERE oda.detailID = :id
             ';
             Shopware()->Db()->executeUpdate($sql,
-                [ 'supplier' => 'InnoCigs', 'id' => $orderDetailId]);
+                [ 'supplier' => $supplier, 'id' => $orderDetailId]);
         }
+        // STATUS_OK -> nothing left to do regarding dropship, true if there are no dropship products
+        $dropshipStatus = $orderType > 1 ? DropshipManager::STATUS_NEW : DropshipManager::STATUS_OK;
+        $sql = '
+            UPDATE s_order_attributes oa
+            SET 
+                oa.mxcbc_dsi_ordertype = :orderType,
+                oa.mxcbc_dsi_status = :dropshipStatus
+            WHERE oa.orderID = :orderId
+        ';
+        $this->db->executeUpdate($sql,
+            ['orderType' => $orderType, 'dropshipStatus' => $dropshipStatus, 'orderId' => $args->orderId]
+        );
+        $sendOrders = MxcDropship::getServices()->get(SendOrders::class);
+        $sendOrders->run();
     }
 
     public function onOrderMailSend(Enlight_Event_EventArgs $args)
     {
+        $this->log->debug('onOrderMailSend');
         $context = $args->context;
-        $context = $this->getOrderInfos($context);
+        $this->getMailDeliveryContextInfo($context);
         /** @var Mail $dsMail */
-        $dsMail = Shopware()->Models()->getRepository(Mail::class)->findOneBy(['name' => 'sMxcOrder']);
+        $dsMail = Shopware()->Models()->getRepository(Mail::class)->findOneBy(['name' => 'sMxcDsiOrder']);
         if ($dsMail) {
             /** @var \Enlight_Components_Mail $dsMail */
             $dsMail = Shopware()->TemplateMail()->createMail('sMxcDsiOrder', $context);
@@ -158,14 +168,14 @@ class BackendOrderSubscriber implements SubscriberInterface
         return null;
     }
 
-    public function getOrderInfos(array $context)
+    protected function getMailDeliveryContextInfo(array &$context)
     {
         $orderType = 0;
         foreach ($context['sOrderDetails'] as &$detail) {
-            if (! isset($detail['additional_details']['mxcbc_dsi_supplier'])) continue;
+            if (! array_key_exists('additional_details', $detail)) continue;
             $supplier = $detail['additional_details']['mxcbc_dsi_supplier'];
             if ($supplier === null) {
-                $detail['additional_details']['mxcbc_dsi_supplier'] = 'vapee.de';
+                $detail['additional_details']['mxcbc_dsi_supplier'] = $this->config->get('shopName');
                 $orderType |= 1;
             } else {
                 $orderType |= 2;
@@ -177,17 +187,15 @@ class BackendOrderSubscriber implements SubscriberInterface
         //      2: only products from dropship partner(s)
         //      3: products from both own stock and dropship partners
         $context['mxcbc_dsi']['orderType'] = $orderType;
-        return $context;
     }
 
     // this is the backend gui
     public function onBackendOrderPostDispatch(Enlight_Event_EventArgs $args)
     {
-//        switch ($args->getRequest()->getActionName()) {
-//            case 'save':
-//                return true;
-//                break;
-//            default:
+        $request = $args->getRequest();
+        $action = $request->getActionName();
+        if ($action == 'save') return;
+
 //
 //                $buttonStatus = 1;
 //                $buttonDisabled = false;
@@ -320,39 +328,15 @@ class BackendOrderSubscriber implements SubscriberInterface
 //                    array('data' => $orderList)
 //                );
 //
-//                // Add tempolate-dir
 //                $view = $args->getSubject()->View();
-//                $view->addTemplateDir(
-//                    $this->Path() . 'Views/'
-//                );
+//                $view->addTemplateDir($this->Path() . 'Views/');
 //
-//                $view->extendsTemplate(
-//                    'backend/dcompanion/order/store/dc_sources.js'
-//                );
-//
-//                // Extends the extJS-templates
-//                $view->extendsTemplate(
-//                    'backend/dcompanion/order/view/detail/overview.js'
-//                );
-//
-//                // Extends the extJS-templates
-//                $view->extendsTemplate(
-//                    'backend/dcompanion/order/model/position.js'
-//                );
-//
-//                $view->extendsTemplate(
-//                    'backend/dcompanion/order/view/detail/position.js'
-//                );
-//
-//                $view->extendsTemplate(
-//                    'backend/dcompanion/order/view/list/list.js'
-//                );
-//
-//                $view->extendsTemplate(
-//                    'backend/dcompanion/order/model/order.js'
-//                );
-//                $this->__logger('return: ' . $args->getReturn());
+//                $view->extendsTemplate('backend/dcompanion/order/store/dc_sources.js');
+//                $view->extendsTemplate('backend/dcompanion/order/view/detail/overview.js');
+//                $view->extendsTemplate('backend/dcompanion/order/model/position.js');
+//                $view->extendsTemplate('backend/dcompanion/order/view/detail/position.js');
+//                $view->extendsTemplate('backend/dcompanion/order/view/list/list.js');
+//                $view->extendsTemplate('backend/dcompanion/order/model/order.js');
 //                break;
-//        }
     }
 }

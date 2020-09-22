@@ -82,12 +82,4 @@ class OrderSendCronJob implements SubscriberInterface
             WHERE s_order_details.orderID = ?
         ', [$orderId]);
     }
-
-    private function getDropshipOrderIds()
-    {
-        return $this->db->fetchAll(
-            'SELECT orderID FROM s_order_attributes WHERE mxcbc_dsi_active = 1 AND mxcbc_dsi_status = 0',
-            [], PDO::FETCH_COLUMN
-        );
-    }
 }

@@ -34,9 +34,10 @@ class DropshipManager implements AugmentedObject
 
     const NO_ERROR          = 0;
 
-    const STATUS_NEW        = 0;
-    const STATUS_OK         = 1;
-    const STATUS_ERROR      = 2;
+    const STATUS_NEW                    = 0;
+    const STATUS_OK                     = 1;
+    const STATUS_AWAITING_TRACKING_ID   = 2;
+    const STATUS_ERROR                  = 3;
 
     // delivery modes
     const MODE_OWNSTOCK_ONLY        = 0;
@@ -123,6 +124,13 @@ class DropshipManager implements AugmentedObject
     {
         $result = $this->events->trigger(__FUNCTION__, $this);
         return $result->toArray();
+    }
+
+    // Important: order ID is $order['orderID'], e.g. not $order['id']
+    public function sendOrder(array $order)
+    {
+        $result = $this->events->trigger(__FUNCTION__, $this, ['order' => $order]);
+        return $result->pop();
     }
 
     protected function setupModule(DropshipModule $module)

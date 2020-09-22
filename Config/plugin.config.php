@@ -4,6 +4,7 @@ namespace MxcDropship;
 
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Dropship\DropshipLogger;
+use MxcDropship\Jobs\SendOrders;
 use MxcDropship\Models\DropshipLogEntry;
 use MxcDropship\Models\DropshipModule;
 use Shopware\Bundle\AttributeBundle\Service\TypeMapping;
@@ -16,9 +17,9 @@ return [
         ],
         'attributes' => [
             's_order_attributes'         => [
-                'mxcbc_dsi_active'     => ['type' => TypeMapping::TYPE_BOOLEAN],
-                'mxcbc_dsi_cronstatus' => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_status'     => ['type' => TypeMapping::TYPE_INTEGER],
+                'mxcbc_dsi_ordertype'  => ['type' => TypeMapping::TYPE_INTEGER],
+                'mxcbc_dsi_ownstock'   => ['type' => TypeMapping::TYPE_INTEGER],
             ],
             's_order_details_attributes' => [
                 'mxcbc_dsi_supplier'      => ['type' => TypeMapping::TYPE_STRING],
@@ -55,6 +56,7 @@ return [
         'magicals' => [
             DropshipManager::class,
             DropshipLogger::class,
+            SendOrders::class,
         ],
     ],
 ];
