@@ -34,10 +34,20 @@ class DropshipManager implements AugmentedObject
 
     const NO_ERROR          = 0;
 
-    const STATUS_NEW                    = 0;
-    const STATUS_OK                     = 1;
-    const STATUS_AWAITING_TRACKING_ID   = 2;
-    const STATUS_ERROR                  = 3;
+    // Auftrag noch nicht überträgen
+    const ORDER_STATUS_OPEN   = 0;
+
+    // Auftrag erfolgreich übertragen, warten auf Tracking-Daten
+    const ORDER_STATUS_SENT   = 1;
+
+    // Trackingdaten empfangen, Dropshipauftrag abgeschlossen
+    const ORDER_STATUS_CLOSED = 2;
+
+    // Auftrag konnte nicht übertragen werden, Auftrag wird ignoriert, manuelles Eingreifen erforderlich
+    const ORDER_STATUS_ERROR  = 99;
+
+    const ORDER_RETRY     = 1;
+    const ORDER_HALT      = 2;
 
     // delivery modes
     const MODE_OWNSTOCK_ONLY        = 0;

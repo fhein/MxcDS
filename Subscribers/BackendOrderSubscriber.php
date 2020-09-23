@@ -133,7 +133,7 @@ class BackendOrderSubscriber implements SubscriberInterface
                 [ 'supplier' => $supplier, 'id' => $orderDetailId]);
         }
         // STATUS_OK -> nothing left to do regarding dropship, true if there are no dropship products
-        $dropshipStatus = $orderType > 1 ? DropshipManager::STATUS_NEW : DropshipManager::STATUS_OK;
+        $dropshipStatus = $orderType > 1 ? DropshipManager::ORDER_STATUS_OPEN : DropshipManager::ORDER_STATUS_SENT;
         $sql = '
             UPDATE s_order_attributes oa
             SET 
