@@ -26,11 +26,14 @@ class DropshipLogEntry extends ModelEntity  {
     /** @ORM\Column(type="string", nullable=false) */
     private $message;
 
+    /** @ORM\Column(name="order_id", type="integer", nullable=true) */
+    private $orderId;
+
     /** @ORM\Column(name="order_number", type="string", nullable=true) */
     private $orderNumber;
 
     /** @ORM\Column(type="string", nullable=true) */
-    private $productNumber;
+    private $product;
 
     /** @ORM\Column(type="integer", nullable=true) */
     private $quantity;
@@ -47,19 +50,23 @@ class DropshipLogEntry extends ModelEntity  {
     public function getOrderNumber() { return $this->orderNumber; }
     public function setOrderNumber($orderNumber) { $this->orderNumber = $orderNumber; }
 
-    public function getProductNmber() { return $this->productNumber; }
-    public function setProductNumber($productNumber) { $this->productNumber = $productNumber; }
+    public function getOrderId() { return $this->orderId; }
+    public function setOrderId($orderId) { $this->orderId = $orderId; }
+
+    public function getProduct() { return $this->product; }
+    public function setProduct($product) { $this->product = $product; }
 
     public function getQuantity() { return $this->quantity; }
     public function setQuantity($quantity) { $this->quantity = $quantity; }
 
-    public function set($level, $module, $message, $orderNumber = null, $productNumber = null, $quantity = null)
+    public function set($level, $module, $message, $orderId = null, $orderNumber = null, $product = null, $quantity = null)
     {
         $this->level = $level;
         $this->module = $module;
         $this->message = $message;
         $this->orderNumber = $orderNumber;
         $this->quantity = $quantity;
-        $this->productNumber = $productNumber;
+        $this->product = $product;
+        $this->orderId = $orderId;
     }
 }

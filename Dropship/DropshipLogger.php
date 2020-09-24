@@ -34,12 +34,13 @@ class DropshipLogger implements AugmentedObject
         int $level,
         string $module,
         string $message,
+        int $orderId = null,
         string $orderNumber = null,
-        string $productNumber = null,
+        string $product = null,
         int $quantity = null
     ) {
         $entry = new DropshipLogEntry();
-        $entry->set($level, $module, $message, $orderNumber, $productNumber, $quantity);
+        $entry->set($level, $module, $message, $orderId, $orderNumber, $product, $quantity);
         $this->modelManager->persist($entry);
     }
 

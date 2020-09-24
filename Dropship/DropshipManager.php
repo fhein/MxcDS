@@ -113,16 +113,6 @@ class DropshipManager implements AugmentedObject
         return $this->auto;
     }
 
-    public function processOrder(array $order)
-    {
-        $details = $order['details'];
-        $suppliers = array_unique(array_column($details, 'mxcbc_dsi_suppliers'));
-        foreach ($suppliers as $supplier) {
-            $processor = $this->getService($supplier, 'OrderProcessor');
-            $processor->processOrder($order);
-        }
-    }
-
     public function updatePrices()
     {
         $result = $this->events->trigger(__FUNCTION__, $this);

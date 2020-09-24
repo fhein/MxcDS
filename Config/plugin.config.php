@@ -33,7 +33,6 @@ return [
                 'mxcbc_dsi_supplier'      => ['type' => TypeMapping::TYPE_STRING],
                 'mxcbc_dsi_instock'       => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_purchaseprice' => ['type' => TypeMapping::TYPE_FLOAT],
-                'mxcbc_dsi_infos'         => ['type' => TypeMapping::TYPE_STRING],
                 'mxcbc_dsi_status'        => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_message'       => ['type' => TypeMapping::TYPE_STRING],
             ],

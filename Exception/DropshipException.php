@@ -4,54 +4,63 @@ namespace MxcDropship\Exception;
 
 use MxcCommons\Plugin\Plugin;
 use RuntimeException;
+use Throwable;
 
 class DropshipException extends RuntimeException
 {
     // module registration and validation
-    const UNREGISTERED_MODULE           = 100;
-    const DUPLICATE_MODULE_ID           = 101;
-    const INVALID_CONFIG                = 102;
-    const INVALID_MODULE                = 103;
-    const MISSING_MODULE_SERVICE        = 104;
+    const UNREGISTERED_MODULE = 100;
+    const DUPLICATE_MODULE_ID = 101;
+    const INVALID_CONFIG = 102;
+    const INVALID_MODULE = 103;
+    const MISSING_MODULE_SERVICE = 104;
 
-    const MODULE_CLASS_EXIST            = 1;
-    const MODULE_CLASS_IDENTITY         = 2;
-    const MODULE_CLASS_INSTALLED        = 3;
-    const MODULE_CLASS_SERVICES         = 4;
+    const MODULE_CLASS_EXIST = 1;
+    const MODULE_CLASS_IDENTITY = 2;
+    const MODULE_CLASS_INSTALLED = 3;
+    const MODULE_CLASS_SERVICES = 4;
 
     // module API exception
-    const MODULE_API_NO_RESPONSE        = 200;
-    const MODULE_API_JSON_DECODE        = 201;
-    const MODULE_API_JSON_ENCODE        = 202;
-    const MODULE_API_INVALID_XML_DATA   = 203;
-    const MODULE_API_HTTP_STATUS        = 204;
-    const MODULE_API_SUPPLIER_ERRORS    = 205;
+    const MODULE_API_FAILURE = 200;
+    const MODULE_API_XML_ERROR = 201;
+    const MODULE_API_SUPPLIER_ERRORS = 202;
 
     // order send exceptions
 
-    const ORDER_POSITIONS_ERROR         = 300;
+    const ORDER_POSITIONS_ERROR = 300;
     const ORDER_RECIPIENT_ADDRESS_ERROR = 301;
-    const ORDER_DROPSHIP_NOK            = 302;
-
 
     // these will not be thrown
 
-    const PRODUCT_NOT_AVAILABLE     = 2101;
-    const PRODUCT_UNKNOWN           = 2102;
-    const PRODUCT_NUMBER_MISSING    = 2103;
-    const PRODUCT_OUT_OF_STOCK      = 2104;
-    const POSITION_EXCEEDS_STOCK    = 2105;
+    const XML_INVALID = 2001;
+    const XML_JSON_DECODE_FAILED = 2002;
+    const XML_JSON_ENCODE_FAILED = 2003;
 
-    const RECIPIENT_COMPANY_TOO_LONG            = 2201;
-    const RECIPIENT_COMPANY2_TOO_LONG           = 2202;
-    const RECIPIENT_FIRST_NAME_TOO_SHORT        = 2203;
-    const RECIPIENT_LAST_NAME_TOO_SHORT         = 2204;
-    const RECIPIENT_NAME_TOO_LONG               = 2205;
-    const RECIPIENT_STREET_ADDRESS_TOO_SHORT    = 2206;
-    const RECIPIENT_STREET_ADDRESS_TOO_LONG     = 2207;
-    const RECIPIENT_ZIP_TOO_SHORT               = 2208;
-    const RECIPIENT_CITY_TOO_SHORT              = 2209;
-    const RECIPIENT_INVALID_COUNTRY_CODE        = 2210;
+    const PRODUCT_NOT_AVAILABLE = 2101;
+    const PRODUCT_UNKNOWN = 2102;
+    const PRODUCT_NUMBER_MISSING = 2103;
+    const PRODUCT_OUT_OF_STOCK = 2104;
+    const POSITION_EXCEEDS_STOCK = 2105;
+
+    const RECIPIENT_COMPANY_TOO_LONG = 2201;
+    const RECIPIENT_COMPANY2_TOO_LONG = 2202;
+    const RECIPIENT_FIRST_NAME_TOO_SHORT = 2203;
+    const RECIPIENT_LAST_NAME_TOO_SHORT = 2204;
+    const RECIPIENT_NAME_TOO_LONG = 2205;
+    const RECIPIENT_STREET_ADDRESS_TOO_SHORT = 2206;
+    const RECIPIENT_STREET_ADDRESS_TOO_LONG = 2207;
+    const RECIPIENT_ZIP_TOO_SHORT = 2208;
+    const RECIPIENT_CITY_TOO_SHORT = 2209;
+    const RECIPIENT_INVALID_COUNTRY_CODE = 2210;
+
+    const API_HTTP_STATUS_ERROR = 2301;
+    const API_NO_RESONSE = 2302;
+
+    protected static $xmlErrorMessages = [
+        self::XML_INVALID            => 'Die vom Server gelieferten XML-Daten sind ungültig.',
+        self::XML_JSON_DECODE_FAILED => 'Die Dekodierung der XML Daten ist fehlgeschlagen (json_decode).',
+        self::XML_JSON_ENCODE_FAILED => 'Die Dekodierung der XML Daten ist fehlgeschlagen (json_encode).',
+    ];
 
     protected static $addressErrorMessages = [
         self::RECIPIENT_COMPANY_TOO_LONG         => 'Der Firmenname darf maximal 30 Zeichen lang sein.',
@@ -66,41 +75,50 @@ class DropshipException extends RuntimeException
         self::RECIPIENT_INVALID_COUNTRY_CODE     => 'Ungültiger Ländercode.',
     ];
 
+    protected static $apiErrorMessages = [
+        self::API_HTTP_STATUS_ERROR => 'Request liefert HTTP-Fehlerstatus %u.',
+        self::API_NO_RESONSE        => 'Der Server antwortet nicht.',
+    ];
+
     protected $supplier;
     protected $httpStatus;
+    protected $apiErrors;
+    protected $xmlErrors;
     protected $supplierErrors;
     protected $positionErrors;
     protected $addressErrors;
-    protected $dropshipInfo;
-
 
     // initializers regarding module registration and validation
 
-    public static function fromMissingModuleService(string $service) {
+    public static function fromMissingModuleService(string $service)
+    {
         $code = self::MISSING_MODULE_SERVICE;
         $msg = sprintf('Dropship module does not provide required module service %s.', $service);
         return new self($msg, $code);
     }
 
-    public static function fromUnregisteredModule(string $id) {
+    public static function fromUnregisteredModule(string $id)
+    {
         $code = self::UNREGISTERED_MODULE;
         $msg = sprintf('Dropship module %s is not registered.', $id);
         return new self($msg, $code);
     }
 
-    public static function fromDuplicateModule(string $id) {
+    public static function fromDuplicateModule(string $id)
+    {
         $code = self::DUPLICATE_MODULE_ID;
         $msg = sprintf('Duplicate dropship module %s.', $id);
         return new self($msg, $code);
     }
 
-    public static function fromInvalidConfig(string $what, $item) {
+    public static function fromInvalidConfig(string $what, $item)
+    {
         $code = self::INVALID_CONFIG;
         if (is_string($item)) {
             $msgx = 'Provided string is empty.';
         } else {
             $msgx = sprintf('Non empty string expected, but got a %s instead.',
-            is_object($item) ? get_class($item) : gettype($item));
+                is_object($item) ? get_class($item) : gettype($item));
         }
         $msg = sprintf('Invalid config setting %s. %s', $what, $msgx);
         return new self($msg, $code);
@@ -134,44 +152,42 @@ class DropshipException extends RuntimeException
 
     // initializers regarding module API
 
-    public static function fromInvalidXML(string $supplier)
+    public static function fromClientException(string $supplier, Throwable $t)
     {
-        $msg = sprintf('Module %s:<br/> Invalid XML data received', $supplier);
-        $code = self::MODULE_API_INVALID_XML_DATA;
+        $msg = 'API Client (library) error.';
+        $code = self::MODULE_API_FAILURE;
         $e = new DropshipException($msg, $code);
-        $e->setSupplier($supplier);
+        $e->setApiError(['code' => $t->getCode(), 'message' => $t->getMessage()]);
         return $e;
     }
 
-    public static function fromJsonEncode(string $supplier) {
-        $msg = sprintf('Module %s:<br/> Failed to encode XML data to JSON.', $supplier);
-        $code = self::MODULE_API_JSON_ENCODE;
+    public static function fromXmlError(string $supplier, int $error)
+    {
+        $msg = 'Invalid XML date received.';
+        $code = self::MODULE_API_XML_ERROR;
         $e = new DropshipException($msg, $code);
-        $e->setSupplier($supplier);
+        $e->setXmlError(['code' => $error, 'message' => self::$xmlErrorMessages[$error]]);
         return $e;
     }
 
-    public static function fromJsonDecode(string $supplier) {
-        $msg = sprintf('Module %s:<br/>Failed to decode JSON data.', $supplier);
-        $code = self::MODULE_API_JSON_DECODE;
-        $e = new DropshipException($msg, $code);
-        $e->setSupplier($supplier);
-        return $e;
-    }
-
-    public static function fromSupplierErrors(string $supplier, array $errors) {
+    public static function fromSupplierErrors(string $supplier, array $errors)
+    {
         $code = self::MODULE_API_SUPPLIER_ERRORS;
         $msg = 'Supplier API error codes available.';
-        $e =  new DropshipException($msg, $code);
+        $e = new DropshipException($msg, $code);
         $e->setSupplierErrors($errors);
         $e->setSupplier($supplier);
         return $e;
     }
 
-    public static function fromHttpStatus(string $supplier, int $status) {
-        $code = $status;
-        $msg = sprintf('InnoCigs API: <br\>HTTP Status: %u', $status);
+    public static function fromHttpStatus(string $supplier, int $status)
+    {
+        $code = self::MODULE_API_FAILURE;
+        $msg = sprintf('InnoCigs API failure: <br\>HTTP Status: %u', $status);
         $e = new DropshipException($msg, $code);
+        $code = self::API_HTTP_STATUS_ERROR;
+        $msg = sprintf(self::$apiErrorMessages[$code], $status);
+        $e->setApiError(['code' => $code, 'message' => $msg]);
         $e->setHttpStatus($status);
         $e->setSupplier($supplier);
         return $e;
@@ -194,22 +210,11 @@ class DropshipException extends RuntimeException
         $errors = [];
         foreach ($err as $error) {
             $errors[] = [
-                'code' => $error,
+                'code'    => $error,
                 'message' => self::$addressErrorMessages[$error],
             ];
         }
         $e->setAddressErrors($errors);
-        $e->setSupplier($supplier);
-        return $e;
-    }
-
-    public static function fromDropshipNOK($supplier, array $errors, array $info)
-    {
-        $code = self::ORDER_DROPSHIP_NOK;
-        $msg = 'InnoCigs API error codes available.';
-        $e =  new self($msg, $code);
-        $e->setSupplierErrors($errors);
-        $e->setDropshipInfo($info);
         $e->setSupplier($supplier);
         return $e;
     }
@@ -220,16 +225,15 @@ class DropshipException extends RuntimeException
         if (isset($errors['ERROR']['CODE'])) {
             $error = $errors['ERROR'];
             $this->supplierErrors[] = [
-                'code' => $error['CODE'],
+                'code'    => $error['CODE'],
                 'message' => $error['MESSAGE'],
             ];
             return;
         }
         // multiple errors were returned
-        foreach ($errors['ERROR'] as $error)
-        {
+        foreach ($errors['ERROR'] as $error) {
             $this->supplierErrors[] = [
-                'code' => $error['CODE'],
+                'code'    => $error['CODE'],
                 'message' => $error['MESSAGE'],
             ];
         }
@@ -255,15 +259,18 @@ class DropshipException extends RuntimeException
         $this->supplier = $supplier;
     }
 
-    public function setPositionErrors(array $positionErrors) {
+    public function setPositionErrors(array $positionErrors)
+    {
         $this->positionErrors = $positionErrors;
     }
 
-    public function getPositionErrors() {
+    public function getPositionErrors()
+    {
         return $this->positionErrors;
     }
 
-    public function setAddressErrors($errors) {
+    public function setAddressErrors($errors)
+    {
         $this->addressErrors = $errors;
     }
 
@@ -272,14 +279,24 @@ class DropshipException extends RuntimeException
         return $this->addressErrors;
     }
 
-    public function setDropshipInfo($info)
+    public function setXmlError(array $error)
     {
-        $this->dropshipInfo = $info;
+        $this->xmlErrors = [$error];
     }
 
-    public function getDropshipInfo()
+    public function getXmlErrors()
     {
-        return $this->dropshipInfo;
+        return $this->xmlErrors;
+    }
+
+    public function setApiError(array $error)
+    {
+        $this->apiErrors = [$error];
+    }
+
+    public function getApiErrors()
+    {
+        return $this->apiErrors;
     }
 
 }

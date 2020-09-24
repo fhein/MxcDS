@@ -13,7 +13,7 @@ Ext.define('Shopware.apps.MxcDropshipLog.model.Log', {
     { name : 'module', type: 'string' },
     { name : 'message', type: 'string' },
     { name : 'orderNumber', type: 'string', useNull: true },
-    { name : 'productNumber', type: 'string', useNull: true },
+    { name : 'product', type: 'string', useNull: true },
     { name : 'quantity', type: 'integer', useNull: true },
     { name : 'created', type: 'datetime'}
   ],

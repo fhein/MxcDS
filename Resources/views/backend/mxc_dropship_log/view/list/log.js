@@ -19,11 +19,11 @@ Ext.define('Shopware.apps.MxcDropshipLog.view.list.Log', {
           renderer: me.levelColumn,
           flex: 1
         },
-        module:         { header: 'Module',flex: 2},
-        message:        { header: 'Message', flex: 8},
-        orderNumber:    { header: 'Order Number',flex: 1 },
-        productNumber:  { header: 'Position', flex: 1 },
-        quantity:       { header: 'Amount', flex: 1 }
+        orderNumber:    { header: 'Order',flex: 1 },
+        product:        { header: 'Product', flex: 2 },
+        quantity:       { header: 'Amount', flex: 1 },
+        module:         { header: 'Module',flex: 1},
+        message:        { header: 'Message', flex: 8}
       },
       addButton: false,
       editColumn: false,
