@@ -30,6 +30,8 @@ class BackendOrderSubscriber implements SubscriberInterface
     /** @var Shopware_Components_Config  */
     private $config;
 
+    protected $panels;
+
     public function __construct()
     {
         $this->log = MxcDropship::getServices()->get('logger');
@@ -43,11 +45,20 @@ class BackendOrderSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            'Shopware_Modules_Order_SendMail_Send'                          => 'onOrderMailSend',
-            'Shopware_Modules_Order_SaveOrder_OrderCreated'                 => 'onOrderCreated',
+            'Shopware_Modules_Order_SendMail_Send'                              => 'onOrderMailSend',
+            'Shopware_Modules_Order_SaveOrder_OrderCreated'                     => 'onOrderCreated',
+            'Enlight_Controller_Action_PostDispatch_Backend_Order'              => 'onBackendOrderPostDispatch',
+            'Enlight_Controller_Dispatcher_ControllerPath_Backend_MxcDropship'  => 'onGetControllerPath',
+
 //            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
 //            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
         ];
+    }
+
+    public function onGetControllerPath(Enlight_Event_EventArgs $args)
+    {
+        return MxcDropship::PLUGIN_DIR . '/Controllers/Backend/MxcDropship.php';
+
     }
 
     // Gets triggered after a position gets saved from the positions tab of a backend order
@@ -118,10 +129,10 @@ class BackendOrderSubscriber implements SubscriberInterface
             $attr = $item['additional_details'];
             $supplier = $attr['mxcbc_dsi_supplier'];
             if ($supplier === null) {
-                $orderType |= 1;    // product from own stock
+                $orderType |= DropshipManager::ORDER_TYPE_OWNSTOCK;    // product from own stock
                 $supplier = $this->config->get('shopName');
             } else {
-                $orderType |= 2;    // dropship product
+                $orderType |= DropshipManager::ORDER_TYPE_DROPSHIP;    // dropship product
             }
             // save article detail supplier and product number to order detail
             $sql = '
@@ -133,7 +144,7 @@ class BackendOrderSubscriber implements SubscriberInterface
                 [ 'supplier' => $supplier, 'id' => $orderDetailId]);
         }
         // STATUS_OK -> nothing left to do regarding dropship, true if there are no dropship products
-        $dropshipStatus = $orderType > 1 ? DropshipManager::ORDER_STATUS_OPEN : DropshipManager::ORDER_STATUS_SENT;
+        $dropshipStatus = $orderType > DropshipManager::ORDER_TYPE_OWNSTOCK ? DropshipManager::ORDER_STATUS_OPEN : DropshipManager::ORDER_STATUS_SENT;
         $sql = '
             UPDATE s_order_attributes oa
             SET 
@@ -189,12 +200,41 @@ class BackendOrderSubscriber implements SubscriberInterface
         $context['mxcbc_dsi']['orderType'] = $orderType;
     }
 
+    protected function getPanels()
+    {
+        return $this->panels ?? $this->panels = MxcDropship::getPanelConfig();
+    }
+
     // this is the backend gui
     public function onBackendOrderPostDispatch(Enlight_Event_EventArgs $args)
     {
         $request = $args->getRequest();
         $action = $request->getActionName();
+
         if ($action == 'save') return;
+        $view = $args->getSubject()->View();
+        if ($action == 'getList') {
+            $panels = $this->getPanels();
+            $orderList = $view->getAssign('data');
+            foreach ($orderList as &$order) {
+                $attr = $this->db->fetchAll(
+                    'SELECT * from s_order_attributes oa WHERE oa.orderID = :orderId',
+                    ['orderId' => $order['id']]
+                )[0];
+                $panels = $this->getPanels();
+                $status = $attr['mxcbc_dsi_status'];
+                $color = $panels[$status]['background'];
+                $order['mxcbc_dsi_bullet_background_color'] = $color;
+                $order['mxcbc_dsi_bullet_title'] = $panels[$status]['message'];
+            }
+            $view->clearAssign('data');
+            $view->assign('data', $orderList);
+        }
+
+        $view->extendsTemplate('backend/mxc_dsi_order/view/detail/overview.js');
+        $view->extendsTemplate('backend/mxc_dsi_order/view/list/list.js');
+
+
 
 //
 //                $buttonStatus = 1;

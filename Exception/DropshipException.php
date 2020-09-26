@@ -21,7 +21,7 @@ class DropshipException extends RuntimeException
     const MODULE_CLASS_SERVICES = 4;
 
     // module API exception
-    const MODULE_API_FAILURE = 200;
+    const MODULE_API_ERROR = 200;
     const MODULE_API_XML_ERROR = 201;
     const MODULE_API_SUPPLIER_ERRORS = 202;
 
@@ -155,7 +155,7 @@ class DropshipException extends RuntimeException
     public static function fromClientException(string $supplier, Throwable $t)
     {
         $msg = 'API Client (library) error.';
-        $code = self::MODULE_API_FAILURE;
+        $code = self::MODULE_API_ERROR;
         $e = new DropshipException($msg, $code);
         $e->setApiError(['code' => $t->getCode(), 'message' => $t->getMessage()]);
         return $e;
@@ -182,7 +182,7 @@ class DropshipException extends RuntimeException
 
     public static function fromHttpStatus(string $supplier, int $status)
     {
-        $code = self::MODULE_API_FAILURE;
+        $code = self::MODULE_API_ERROR;
         $msg = sprintf('InnoCigs API failure: <br\>HTTP Status: %u', $status);
         $e = new DropshipException($msg, $code);
         $code = self::API_HTTP_STATUS_ERROR;
