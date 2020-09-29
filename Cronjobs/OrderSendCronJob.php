@@ -29,12 +29,13 @@ class OrderSendCronJob implements SubscriberInterface
         $sendOrders = $services->get(SendOrders::class);
         $log = $services->get('logger');
 
+        $results = $sendOrders->run();
         $result = true;
-        try {
-            $sendOrders->run();
-        } catch (Throwable $e) {
-            $this->log->except($e, false, false);
-            $result = false;
+        foreach ($results as $r) {
+            if ($r === false) {
+                $result = false;
+                break;
+            }
         }
         $resultMsg = $result === true ? '. Success.' : '. Failure.';
         $end = date('d-m-Y H:i:s');

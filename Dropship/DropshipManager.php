@@ -24,7 +24,6 @@ class DropshipManager implements AugmentedObject
         'DropshipEventListener',
         'ArticleRegistry',
         'ApiClient',
-        'StockInfo',
         'OrderProcessor',
         'DropshippersCompanion',
     ];
@@ -109,19 +108,6 @@ class DropshipManager implements AugmentedObject
         return $service;
     }
 
-    // ask each dropship adapter about the # of items in stock
-    // $attr is an array containing all articles_attributes or compatible
-    // $stopIfAvailable will return the result of the first adapter with stock
-    public function getStockInfo(array $attr, bool $stopIfAvailable)
-    {
-        $responses = $this->events->trigger(
-            __FUNCTION__,
-            $this,
-            [ 'attr' => $attr, 'stopIfAvailable' => $stopIfAvailable]
-        );
-        return $responses->toArray();
-    }
-
     public function isAuto() {
         return $this->auto;
     }
@@ -143,7 +129,7 @@ class DropshipManager implements AugmentedObject
     public function sendOrder(array $order)
     {
         $result = $this->events->trigger(__FUNCTION__, $this, ['order' => $order]);
-        return $result->pop();
+        return $result->toArray();
     }
 
     protected function setupModule(DropshipModule $module)

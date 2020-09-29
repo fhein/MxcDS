@@ -5,6 +5,7 @@ namespace MxcDropship;
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Dropship\DropshipLogger;
 use MxcDropship\Jobs\SendOrders;
+use MxcDropship\Jobs\TrackingDataUpdate;
 use MxcDropship\Models\DropshipLogEntry;
 use MxcDropship\Models\DropshipModule;
 use Shopware\Bundle\AttributeBundle\Service\TypeMapping;
@@ -23,11 +24,6 @@ return [
                 'mxcbc_dsi_status'    => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_message'   => ['type' => TypeMapping::TYPE_STRING],
 
-                'mxcbc_dsi_date'        => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_dropship_id' => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_order_id'    => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_carrier'     => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_tracking_id' => ['type' => TypeMapping::TYPE_STRING],
             ],
             's_order_details_attributes' => [
                 'mxcbc_dsi_supplier'      => ['type' => TypeMapping::TYPE_STRING],
@@ -35,6 +31,12 @@ return [
                 'mxcbc_dsi_purchaseprice' => ['type' => TypeMapping::TYPE_FLOAT],
                 'mxcbc_dsi_status'        => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_message'       => ['type' => TypeMapping::TYPE_STRING],
+
+                'mxcbc_dsi_date'        => ['type' => TypeMapping::TYPE_STRING],
+                'mxcbc_dsi_dropship_id' => ['type' => TypeMapping::TYPE_STRING],
+                'mxcbc_dsi_order_id'    => ['type' => TypeMapping::TYPE_STRING],
+                'mxcbc_dsi_carrier'     => ['type' => TypeMapping::TYPE_STRING],
+                'mxcbc_dsi_tracking_id' => ['type' => TypeMapping::TYPE_STRING],
             ],
             's_articles_attributes'      => [
                 'mxcbc_dsi_supplier' => ['type' => TypeMapping::TYPE_STRING],
@@ -55,6 +57,7 @@ return [
             DropshipManager::class,
             DropshipLogger::class,
             SendOrders::class,
+            TrackingDataUpdate::class,
         ],
     ],
 ];

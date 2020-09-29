@@ -27,11 +27,11 @@ class SendOrders implements AugmentedObject
             LEFT JOIN s_order_attributes oa ON oa.orderID = o.id 
             WHERE oa.mxcbc_dsi_ordertype > 1 AND oa.mxcbc_dsi_status = 0
         ');
-        if (empty($newDropshipOrders)) return;
+        if (empty($newDropshipOrders)) return ([true]);
         /** @var DropshipManager $dropshipManager */
         $dropshipManager = $this->services->get(DropshipManager::class);
         foreach ($newDropshipOrders as $newDropshipOrder) {
-            $dropshipManager->sendOrder($newDropshipOrder);
+            return $dropshipManager->sendOrder($newDropshipOrder);
         }
     }
 }

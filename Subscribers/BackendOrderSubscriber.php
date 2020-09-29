@@ -15,8 +15,6 @@ use Shopware\Models\Mail\Mail;
 use Shopware_Components_Config;
 use Enlight_Hook_HookArgs;
 use Enlight_Components_Db_Adapter_Pdo_Mysql;
-use Throwable;
-use sAdmin;
 
 class BackendOrderSubscriber implements SubscriberInterface
 {
@@ -134,27 +132,10 @@ class BackendOrderSubscriber implements SubscriberInterface
             } else {
                 $orderType |= DropshipManager::ORDER_TYPE_DROPSHIP;    // dropship product
             }
-            // save article detail supplier and product number to order detail
-            $sql = '
-                UPDATE s_order_details_attributes oda
-                SET oda.mxcbc_dsi_supplier = :supplier
-                WHERE oda.detailID = :id
-            ';
-            Shopware()->Db()->executeUpdate($sql,
-                [ 'supplier' => $supplier, 'id' => $orderDetailId]);
+            // update order detail supplier from article detail
+            $this->setOrderDetailSupplier($supplier, $orderDetailId);
         }
-        // STATUS_OK -> nothing left to do regarding dropship, true if there are no dropship products
-        $dropshipStatus = $orderType > DropshipManager::ORDER_TYPE_OWNSTOCK ? DropshipManager::ORDER_STATUS_OPEN : DropshipManager::ORDER_STATUS_SENT;
-        $sql = '
-            UPDATE s_order_attributes oa
-            SET 
-                oa.mxcbc_dsi_ordertype = :orderType,
-                oa.mxcbc_dsi_status = :dropshipStatus
-            WHERE oa.orderID = :orderId
-        ';
-        $this->db->executeUpdate($sql,
-            ['orderType' => $orderType, 'dropshipStatus' => $dropshipStatus, 'orderId' => $args->orderId]
-        );
+        $this->setOrderTypeAndStatus($orderType, $args);
         $sendOrders = MxcDropship::getServices()->get(SendOrders::class);
         $sendOrders->run();
     }
@@ -378,5 +359,39 @@ class BackendOrderSubscriber implements SubscriberInterface
 //                $view->extendsTemplate('backend/dcompanion/order/view/list/list.js');
 //                $view->extendsTemplate('backend/dcompanion/order/model/order.js');
 //                break;
+    }
+
+    protected function setOrderDetailSupplier($supplier, $orderDetailId): void
+    {
+        Shopware()->Db()->executeUpdate('
+                UPDATE s_order_details_attributes oda
+                SET oda.mxcbc_dsi_supplier = :supplier
+                WHERE oda.detailID = :id
+                ', [
+                'supplier' => $supplier,
+                'id'       => $orderDetailId
+            ]
+        );
+    }
+
+    protected function setOrderTypeAndStatus(int $orderType, Enlight_Event_EventArgs $args): void
+    {
+        // If the order does not contain dropship products, drophship status is 'closed'
+        $dropshipStatus = $orderType > DropshipManager::ORDER_TYPE_OWNSTOCK
+            ? DropshipManager::ORDER_STATUS_OPEN
+            : DropshipManager::ORDER_STATUS_CLOSED;
+
+        $this->db->executeUpdate('
+            UPDATE s_order_attributes oa
+            SET 
+                oa.mxcbc_dsi_ordertype = :orderType,
+                oa.mxcbc_dsi_status = :dropshipStatus
+            WHERE oa.orderID = :orderId
+        ', [
+                'orderType'      => $orderType,
+                'dropshipStatus' => $dropshipStatus,
+                'orderId'        => $args->orderId
+            ]
+        );
     }
 }

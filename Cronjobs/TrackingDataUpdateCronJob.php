@@ -5,6 +5,8 @@
 namespace MxcDropship\Cronjobs;
 
 use Enlight\Event\SubscriberInterface;
+use MxcDropship\Jobs\TrackingDataUpdate;
+use MxcDropship\MxcDropship;
 use MxcDropshipInnocigs\MxcDropshipInnocigs;
 use Throwable;
 
@@ -27,20 +29,20 @@ class TrackingDataUpdateCronJob implements SubscriberInterface
     {
         $start = date('d-m-Y H:i:s');
 
-        $services = MxcDropshipInnocigs::getServices();
+        $services = MxcDropship::getServices();
+        $trackingDataUpdate = $services->get(TrackingDataUpdate::class);
         $log = $services->get('logger');
+
         $result = true;
-
         try {
-
+            $trackingDataUpdate->run();
         } catch (Throwable $e) {
-            $this->log->except($e, false, false);
+            $log->except($e, false, false);
             $result = false;
         }
-
         $resultMsg = $result === true ? '. Success.' : '. Failure.';
         $end = date('d-m-Y H:i:s');
-        $msg = 'TrackingData cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
+        $msg = 'Tracking data update cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
 
         $result === true ? $log->info($msg) : $log->err($msg);
 
