@@ -37,17 +37,20 @@ class DropshipManager implements AugmentedObject
     const ORDER_TYPE_OWNSTOCK = 1;
     const ORDER_TYPE_DROPSHIP = 2;
 
-    // Auftrag noch nicht überträgen
+    // new dropship order, not transmitted to supplier
     const ORDER_STATUS_OPEN   = 0;
 
-    // Auftrag erfolgreich übertragen, warten auf Tracking-Daten
+    // dropship order succeessfully submitted, waiting for tracking data
     const ORDER_STATUS_SENT   = 1;
 
-    // Tracking-Daten erhalten
+    // tracking data received
     const ORDER_STATUS_TRACKING_DATA = 2;
 
-    // Dropshipauftrag abgeschlossen
+    // dropship order closed (success)
     const ORDER_STATUS_CLOSED = 3;
+
+    // dropship order cancelled by supplier
+    const ORDER_STATUS_CANCELLED = 4;
 
     // Auftrag konnte nicht übertragen werden, Auftrag wird ignoriert, manuelles Eingreifen erforderlich
     const ORDER_STATUS_POSITION_ERROR   = 99;
@@ -128,6 +131,11 @@ class DropshipManager implements AugmentedObject
     // Important: order ID is $order['orderID'], e.g. not $order['id']
     public function sendOrder(array $order)
     {
+        $result = $this->events->trigger(__FUNCTION__, $this, ['order' => $order]);
+        return $result->toArray();
+    }
+
+    public function updateTrackingData(array $order) {
         $result = $this->events->trigger(__FUNCTION__, $this, ['order' => $order]);
         return $result->toArray();
     }

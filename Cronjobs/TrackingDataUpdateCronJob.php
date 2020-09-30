@@ -5,7 +5,7 @@
 namespace MxcDropship\Cronjobs;
 
 use Enlight\Event\SubscriberInterface;
-use MxcDropship\Jobs\TrackingDataUpdate;
+use MxcDropship\Jobs\UpdateTrackingData;
 use MxcDropship\MxcDropship;
 use MxcDropshipInnocigs\MxcDropshipInnocigs;
 use Throwable;
@@ -30,7 +30,7 @@ class TrackingDataUpdateCronJob implements SubscriberInterface
         $start = date('d-m-Y H:i:s');
 
         $services = MxcDropship::getServices();
-        $trackingDataUpdate = $services->get(TrackingDataUpdate::class);
+        $trackingDataUpdate = $services->get(UpdateTrackingData::class);
         $log = $services->get('logger');
 
         $result = true;

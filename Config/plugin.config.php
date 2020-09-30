@@ -5,7 +5,7 @@ namespace MxcDropship;
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Dropship\DropshipLogger;
 use MxcDropship\Jobs\SendOrders;
-use MxcDropship\Jobs\TrackingDataUpdate;
+use MxcDropship\Jobs\UpdateTrackingData;
 use MxcDropship\Models\DropshipLogEntry;
 use MxcDropship\Models\DropshipModule;
 use Shopware\Bundle\AttributeBundle\Service\TypeMapping;
@@ -57,7 +57,7 @@ return [
             DropshipManager::class,
             DropshipLogger::class,
             SendOrders::class,
-            TrackingDataUpdate::class,
+            UpdateTrackingData::class,
         ],
     ],
 ];
