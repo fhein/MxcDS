@@ -27,25 +27,19 @@ class TrackingDataUpdateCronJob implements SubscriberInterface
 
     public function onTrackingDataUpdate(/** @noinspection PhpUnusedParameterInspection */$job)
     {
-        $start = date('d-m-Y H:i:s');
-
-        $services = MxcDropship::getServices();
-        $trackingDataUpdate = $services->get(UpdateTrackingData::class);
-        $log = $services->get('logger');
-
         $result = true;
+        $log = null;
         try {
-            $trackingDataUpdate->run();
+            $services = MxcDropship::getServices();
+            $job = $services->get(UpdateTrackingData::class);
+            $log = $services->get('logger');
+            $log->info('UpdateTrackingData cronjob triggered.');
+            $job->run();
         } catch (Throwable $e) {
-            $log->except($e, false, false);
-            $result = false;
+            if ($log) $log->except($e, false, false);
+            $result = 'Exception occured.';
         }
-        $resultMsg = $result === true ? '. Success.' : '. Failure.';
-        $end = date('d-m-Y H:i:s');
-        $msg = 'Tracking data update cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
-
-        $result === true ? $log->info($msg) : $log->err($msg);
-
+        // displayed in Backend/Settings/Cronjobs
         return $result;
     }
 }

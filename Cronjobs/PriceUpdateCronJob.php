@@ -5,6 +5,7 @@
 namespace MxcDropship\Cronjobs;
 
 use Enlight\Event\SubscriberInterface;
+use MxcCommons\Plugin\Service\Logger;
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
 use MxcDropshipInnocigs\Jobs\UpdatePrices;
@@ -15,6 +16,7 @@ class PriceUpdateCronJob implements SubscriberInterface
 {
     protected $valid = null;
 
+    /** @var Logger */
     protected $log = null;
 
     protected $modelManager = null;

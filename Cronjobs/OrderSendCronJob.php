@@ -21,28 +21,20 @@ class OrderSendCronJob implements SubscriberInterface
         ];
     }
 
-    public function run(/** @noinspection PhpUnusedParameterInspection */ $job)
+    public function run($job)
     {
-        $start = date('d-m-Y H:i:s');
-
-        $services = MxcDropship::getServices();
-        $sendOrders = $services->get(SendOrders::class);
-        $log = $services->get('logger');
-
-        $results = $sendOrders->run();
         $result = true;
-        foreach ($results as $r) {
-            if ($r === false) {
-                $result = false;
-                break;
-            }
+        try {
+            $services = MxcDropship::getServices();
+            $job = $services->get(SendOrders::class);
+            $log = $services->get('logger');
+            $log->info('OrderSend cronjob triggered.');
+            $job->run();
+        } catch (Throwable $e) {
+            if ($log) $log->except($e, false, false);
+            $result = 'Exception occured.';
         }
-        $resultMsg = $result === true ? '. Success.' : '. Failure.';
-        $end = date('d-m-Y H:i:s');
-        $msg = 'Order send cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
-
-        $result === true ? $log->info($msg) : $log->err($msg);
-
+        // displayed in Backend/Settings/Cronjobs
         return $result;
     }
 }
