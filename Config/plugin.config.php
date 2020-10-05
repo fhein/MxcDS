@@ -31,12 +31,6 @@ return [
                 'mxcbc_dsi_purchaseprice' => ['type' => TypeMapping::TYPE_FLOAT],
                 'mxcbc_dsi_status'        => ['type' => TypeMapping::TYPE_INTEGER],
                 'mxcbc_dsi_message'       => ['type' => TypeMapping::TYPE_STRING],
-
-                'mxcbc_dsi_date'        => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_dropship_id' => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_order_id'    => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_carrier'     => ['type' => TypeMapping::TYPE_STRING],
-                'mxcbc_dsi_tracking_id' => ['type' => TypeMapping::TYPE_STRING],
             ],
             's_articles_attributes'      => [
                 'mxcbc_dsi_supplier' => ['type' => TypeMapping::TYPE_STRING],

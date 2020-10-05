@@ -23,11 +23,12 @@ class OrderSendCronJob implements SubscriberInterface
 
     public function run($job)
     {
+        $services = MxcDropship::getServices();
+        $log = $services->get('logger');
+
         $result = true;
         try {
-            $services = MxcDropship::getServices();
             $job = $services->get(SendOrders::class);
-            $log = $services->get('logger');
             $log->info('OrderSend cronjob triggered.');
             $job->run();
         } catch (Throwable $e) {

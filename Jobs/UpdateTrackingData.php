@@ -26,21 +26,8 @@ class UpdateTrackingData implements AugmentedObject
         if (empty($sentDropshipOrders)) return ([true]);
         /** @var DropshipManager $dropshipManager */
         $dropshipManager = $this->services->get(DropshipManager::class);
-        $result = true;
         foreach ($sentDropshipOrders as $sentDropshipOrder) {
-            $results = $dropshipManager->updateTrackingData($sentDropshipOrder);
-            // if result is false already we can skip the evaluation
-            if ($result === true) {
-                foreach ($results as $r) {
-                    if (! $r) {
-                        $result = false;
-                        break;
-                    }
-                }
-            }
+            $dropshipManager->updateTrackingData($sentDropshipOrder);
         }
-        // $result is false, if at least one error occurs
-        return $result;
-
     }
 }

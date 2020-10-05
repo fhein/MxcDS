@@ -30,24 +30,24 @@ class PriceUpdateCronJob implements SubscriberInterface
 
     public function onUpdatePrices(/** @noinspection PhpUnusedParameterInspection */$job)
     {
-        $start = date('d-m-Y H:i:s');
-
         $services = MxcDropship::getServices();
         $log = $services->get('logger');
+
+        $start = date('d-m-Y H:i:s');
         $result = true;
 
         try {
-            /** @var DropshipManager $dropshipManager */
             $dropshipManager = $services->get(DropshipManager::class);
+            $log->info('Update Stock cronjob triggered.');
             $dropshipManager->updatePrices();
         } catch (Throwable $e) {
-            $this->log->except($e, false, false);
+            $log->except($e, false, false);
             $result = false;
         }
-        $resultMsg = $result === true ? '. Success.' : '. Failure.';
         $end = date('d-m-Y H:i:s');
-        $msg = 'Update prices cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
 
+        $resultMsg = $result === true ? '. Success.' : '. Failure.';
+        $msg = 'Update prices cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
         $result === true ? $log->info($msg) : $log->err($msg);
 
         return $result;

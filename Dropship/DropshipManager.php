@@ -15,6 +15,7 @@ use MxcCommons\Stdlib\SplStack;
 use MxcDropship\Exception\DropshipException;
 use MxcDropship\Models\DropshipModule;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
+use Throwable;
 
 class DropshipManager implements AugmentedObject
 {
@@ -131,45 +132,42 @@ class DropshipManager implements AugmentedObject
 
     public function updatePrices()
     {
-        $result = $this->events->trigger(__FUNCTION__, $this);
+        $result = $this->events->trigger(__FUNCTION__, $this)->toArray();
         ApplyPriceRules::run();
-        return $result;
+        return array_unique($result)[0];
     }
 
     public function updateStock()
     {
-        $result = $this->events->trigger(__FUNCTION__, $this);
-        return $result->toArray();
+        $result = $this->events->trigger(__FUNCTION__, $this)->toArray();
+        return array_unique($result)[0];
     }
 
     // Important: order ID is $order['orderID'], e.g. not $order['id']
     public function sendOrder(array $order)
     {
         $status = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
-        $this->setOrderStatus($order['orderID'], $status);
+        return $this->setOrderStatus($order['orderID'], $status, self::ORDER_STATUS_SENT);
     }
 
     public function updateTrackingData(array $order)
     {
         $status = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
-        $this->setOrderStatus($order['orderID'], $status);
+        return $this->setOrderStatus($order['orderID'], $status, self::ORDER_STATUS_TRACKING_DATA);
     }
 
-    protected function setOrderStatus(int $orderId, array $status)
+    public function setOrderStatus(int $orderId, array $status, int $expectedStatus)
     {
         // modules not involved in the current order processing return null, array_column silently ignores null entries
         $s = array_unique(array_column($status, 'status'));
-        // empty($s) should never be true because DropshipManager functions should never be called for non dropship orders
-        // we check that for sanitary reasons anyway
-        if (empty($s)) return;
+        if (empty($s) || count($s) > 1) return true;
 
-        if (count($s) > 1) {
-            $this->log->warn('Dropship modules returned different status. Using first result');
-        }
-        $status = $status[0];
+        // status progress happens only if all modules return expected status or null (which means not applicable)
+        if ($s[0] != $expectedStatus) return false;
+        // remove null elements and get first (and only) status
+        // note: array_filter maintains the array indexes, so array_value is necessary to access the first element
+        $status = array_values(array_filter($status))[0];
 
-        // false is returned if the order was not processed
-        if (empty($status)) return;
 
         $this->db->executeUpdate('
             UPDATE 
@@ -185,6 +183,7 @@ class DropshipManager implements AugmentedObject
                 'id'      => $orderId,
             ]
         );
+        return true;
     }
 
     protected function setupModule(DropshipModule $module)
@@ -239,12 +238,13 @@ class DropshipManager implements AugmentedObject
         $listener->attach($this->events->getSharedManager());
     }
 
-    public function getNotificationContext(string $supplier, array $order, $key)
+    public function getNotificationContext(string $supplier, string $caller, $key, array $order = null)
     {
-        $context = $this->classConfig['notification_context'][$key];
+        $context = @$this->classConfig['notification_context'][$key][$caller];
+        if ($context === null) return null;
 
         $replacements = [
-            '{$orderNumber}' => $order['ordernumber'],
+            '{$orderNumber}' => @$order['ordernumber'] ?? '',
             '{$supplier}'    => $supplier,
         ];
 
@@ -274,7 +274,7 @@ class DropshipManager implements AugmentedObject
 
     }
 
-    public function logStatus(array $order, array $context)
+    public function logStatus(array $context, array $order = null)
     {
         $this->dropshipLogger->log(
             $context['severity'],
@@ -285,35 +285,100 @@ class DropshipManager implements AugmentedObject
         );
         $errors = $context['errors'];
         if (empty($errors)) {
+            $this->dropshipLogger->done();
             return;
         }
         foreach ($errors as $error) {
             $this->dropshipLogger->log(
                 $context['severity'],
                 $context['supplier'],
-                $error['message'],
+                '- ' . $error['message'],
                 $order['orderID'],
                 $order['ordernumber'],
                 $error['productNumber'],
                 $error['quantity']
             );
         }
+        $this->dropshipLogger->done();
     }
 
     // send status mail and add log entries
-    public function notifyStatus(array $order, array $context)
+    public function notifyStatus(array $context, array $order = null, bool $sendMail = true)
     {
-        $this->sendNotificationMail($context);
-        $this->logStatus($order, $context);
+        if ($sendMail) $this->sendNotificationMail($context);
+        $this->logStatus($context, $order);
+    }
+
+    public function getSupplierOrderDetailsCount(string $supplier, int $orderId)
+    {
+        return $this->db->fetchOne('
+            SELECT 
+                COUNT(od.id) 
+            FROM 
+                s_order_details od
+            LEFT JOIN 
+                s_order_details_attributes oda ON oda.detailID = od.id
+            WHERE 
+                od.orderID = :orderId AND oda.mxcbc_dsi_supplier = :supplier
+        ', ['orderId' => $orderId, 'supplier' => $supplier]);
     }
 
     public function getSupplierOrderDetails(string $supplier, int $orderId)
     {
         return $this->db->fetchAll('
-            SELECT * FROM s_order_details od
-            LEFT JOIN s_order_details_attributes oda ON oda.detailID = od.id
-            WHERE od.orderID = :orderId AND oda.mxcbc_dsi_supplier = :supplier
+            SELECT 
+                * 
+            FROM 
+                s_order_details od
+            LEFT JOIN 
+                s_order_details_attributes oda ON oda.detailID = od.id
+            WHERE 
+                od.orderID = :orderId AND oda.mxcbc_dsi_supplier = :supplier
         ', ['orderId' => $orderId, 'supplier' => $supplier]);
     }
 
+    public function handleDropshipException(
+        string $supplier,
+        string $caller,
+        Throwable $e,
+        bool $sendMail,
+        array $order = null,
+        array $shippingAddress = null
+    ) {
+        $code = $e instanceof DropshipException ? $e->getCode() : 'UNKNOWN_ERROR';
+        $context = $this->getNotificationContext($supplier, $caller, $code, $order);
+        switch ($code) {
+            case DropshipException::MODULE_API_SUPPLIER_ERRORS:
+                $context['errors'] = $e->getSupplierErrors();
+                break;
+            case DropshipException::ORDER_POSITIONS_ERROR:
+                $context['errors'] = $e->getPositionErrors();
+                break;
+            case DropshipException::ORDER_RECIPIENT_ADDRESS_ERROR:
+                $context['errors'] = $e->getAddressErrors();
+                $context['shippingaddress'] = $shippingAddress;
+                break;
+            case DropshipException::MODULE_API_XML_ERROR:
+                $context['errors'] = $e->getXmlErrors();
+                break;
+            case DropshipException::MODULE_API_ERROR:
+                $context['errors'] = $e->getApiErrors();
+                break;
+            case 'UNKNOWN_ERROR':
+            default:
+                $context = $this->getNotificationContext($supplier, $caller, 'UNKNOWN_ERROR', $order);
+                $context['errors'] = [['code' => $e->getCode(), 'message' => $e->getMessage()]];
+        }
+        $this->notifyStatus($context, $order, $sendMail);
+        return [
+            'status' => $context['status'],
+            'message' => $context['message'],
+        ];
+    }
+
+    public function notifyOrderSuccessfullySent(string $supplier, string $caller, array $order)
+    {
+        $context = $this->getNotificationContext($supplier, $caller, 'STATUS_SUCCESS', $order);
+        $this->notifyStatus($context, $order);
+    }
 }

@@ -28,15 +28,14 @@ class StockUpdateCronJob implements SubscriberInterface
     {
         $services = MxcDropship::getServices();
         $log = $services->get('logger');
-        /** @var LoggerInterface $log */
-        $result = true;
 
         $start = date('d-m-Y H:i:s');
+        $result = true;
 
         try {
-            /** @var DropshipManager $dropshipManager */
             $dropshipManager = $services->get(DropshipManager::class);
-            $dropshipManager->updateStock();
+            $log->info('Update Stock cronjob triggered.');
+            $result = $dropshipManager->updateStock();
         } catch (Throwable $e) {
             $log->except($e, false, false);
             $result = false;
@@ -45,7 +44,6 @@ class StockUpdateCronJob implements SubscriberInterface
 
         $resultMsg = $result === true ? '. Success.' : '. Failure.';
         $msg = 'Update stock cronjob ran from ' . $start . ' to ' . $end . $resultMsg;
-
         $result === true ? $log->info($msg) : $log->err($msg);
 
         return $result;

@@ -16,6 +16,7 @@ Ext.define('Shopware.apps.MxcDropshipLog.view.list.Log', {
         },
         level: {
           header: 'Severity',
+          align: 'left',
           renderer: me.levelColumn,
           flex: 1
         },

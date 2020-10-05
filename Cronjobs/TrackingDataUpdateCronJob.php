@@ -27,16 +27,16 @@ class TrackingDataUpdateCronJob implements SubscriberInterface
 
     public function onTrackingDataUpdate(/** @noinspection PhpUnusedParameterInspection */$job)
     {
+        $services = MxcDropship::getServices();
+        $log = $services->get('logger');
+
         $result = true;
-        $log = null;
         try {
-            $services = MxcDropship::getServices();
             $job = $services->get(UpdateTrackingData::class);
-            $log = $services->get('logger');
-            $log->info('UpdateTrackingData cronjob triggered.');
+            $log->debug('UpdateTrackingData cronjob triggered.');
             $job->run();
         } catch (Throwable $e) {
-            if ($log) $log->except($e, false, false);
+            $log->except($e, false, false);
             $result = 'Exception occured.';
         }
         // displayed in Backend/Settings/Cronjobs
