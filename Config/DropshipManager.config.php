@@ -143,7 +143,7 @@ return [
                 'mailSubject'       => 'maxence Dropship - Aktualisierung des Lagerbestands von {$supplier} fehlgeschlagen',
                 'mailTitle'         => '{$supplier} Fehlermeldungen',
                 'mailBody'          => 'die Aktualisierung des Lagerbestands von {$supplier} ist fehlgeschlagen. '
-                                    . 'Der Server liefert Fehlermeldungen. ',
+                                        . 'Der Server liefert Fehlermeldungen. ',
                 'message'           => 'Aktualisierung des Lagerbestands fehlgeschlagen: {$supplier} meldet Fehler. ',
                 'severity'          => DropshipLogger::ERR,
             ],
@@ -163,8 +163,8 @@ return [
                 'mailSubject'       => 'Dropship-Status - Fehler beim Versand der Bestellung {$orderNumber} an {$supplier}',
                 'mailTitle'         => 'Unbekannter Fehler',
                 'mailBody'          => 'beim Versand der Bestellung <strong>{$orderNumber}</strong> an '
-                                        . '<strong>{$supplier}</strong>ist ein bisher nicht '
-                                        . 'behandelbarer Fehler ist aufgetreten. Der Status der Bestellung ist unklar. Bitte '
+                                        . '<strong>{$supplier}</strong> ist ein bisher nicht '
+                                        . 'behandelbarer Fehler aufgetreten. Der Status der Bestellung ist unklar. Bitte '
                                         . 'informieren Sie <strong>dringend</strong> die Entwickler des Dropship Moduls.',
                 'message'           => 'Bisher nicht behandelter Fehler: Dropship-Status unklar. Informieren Sie den Entwickler.',
                 'severity'          => DropshipLogger::CRIT,
@@ -187,7 +187,7 @@ return [
                 'mailSubject'       => 'maxence Dropship - Aktualisierung des Lagerbestands von {$supplier} fehlgeschlagen',
                 'mailTitle'         => 'Unbekannter Fehler',
                 'mailBody'          => 'bei der Aktualisierung des Lagerbestands von {$supplier} ist ein bisher nicht behandelbarer '
-                                        . 'Fehler ist aufgetreten. Bitte informieren Sie <strong>dringend</strong> '
+                                        . 'Fehler aufgetreten. Bitte informieren Sie <strong>dringend</strong> '
                                         .'die Entwickler des Dropship Moduls.',
                 'message'           => 'Bisher nicht behandelter Fehler: Aktualisierung des Lagerbestands fehlgeschlagen. '
                                         . 'Bitte informieren Sie den Entwickler.',
@@ -198,9 +198,9 @@ return [
                 'mailSubject'       => 'maxence Dropship - {$supplier} Preisaktualisierung fehlgeschlagen',
                 'mailTitle'         => 'Unbekannter Fehler',
                 'mailBody'          => 'bei der Aktualisierung der Preise von {$supplier} ist ein bisher nicht behandelbarer '
-                                        . 'Fehler ist aufgetreten. Bitte informieren Sie <strong>dringend</strong> '
+                                        . 'Fehler aufgetreten. Bitte informieren Sie <strong>dringend</strong> '
                                         .'die Entwickler des Dropship Moduls.',
-                'message'           => 'Bisher nicht behandelter Fehler: Aktualisierung des Lagerbestands fehlgeschlagen. '
+                'message'           => 'Preisaktualisierung fehlgeschlagen: Bisher nicht behandelter Fehler aufgetreten. '
                                         . 'Bitte informieren Sie den Entwickler.',
                 'severity'          => DropshipLogger::CRIT,
             ]
