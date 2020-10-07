@@ -10,6 +10,7 @@ class DropshipManagerFactory implements FactoryInterface
     public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
     {
         $dropshipLogger = $container->get(DropshipLogger::class);
-        return new DropshipManager($dropshipLogger);
+        $config = Shopware()->Config();
+        return new DropshipManager($dropshipLogger, $config);
     }
 }

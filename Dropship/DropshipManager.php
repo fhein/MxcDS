@@ -2,20 +2,18 @@
 
 namespace MxcDropship\Dropship;
 
-use MxcCommons\EventManager\EventManager;
 use MxcCommons\EventManager\EventManagerAwareTrait;
-use MxcCommons\EventManager\ResponseCollection;
 use MxcCommons\Plugin\Plugin;
 use MxcCommons\Plugin\Service\ClassConfigAwareTrait;
 use MxcCommons\Plugin\Service\DatabaseAwareTrait;
 use MxcCommons\Plugin\Service\LoggerAwareTrait;
 use MxcCommons\Plugin\Service\ModelManagerAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
-use MxcCommons\Stdlib\SplStack;
 use MxcDropship\Exception\DropshipException;
 use MxcDropship\Models\DropshipModule;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
 use Throwable;
+use Shopware_Components_Config;
 
 class DropshipManager implements AugmentedObject
 {
@@ -32,9 +30,6 @@ class DropshipManager implements AugmentedObject
         'OrderProcessor',
         'DropshippersCompanion',
     ];
-
-    protected $auto = true;
-    protected $mode;
 
     const NO_ERROR = 0;
 
@@ -81,9 +76,12 @@ class DropshipManager implements AugmentedObject
 
     protected $dropshipLogger;
 
-    public function __construct(DropshipLogger $dropshipLogger)
+    protected $config;
+
+    public function __construct(DropshipLogger $dropshipLogger, Shopware_Components_Config $config)
     {
         $this->dropshipLogger = $dropshipLogger;
+        $this->config = $config;
     }
 
     public function init()
@@ -99,10 +97,6 @@ class DropshipManager implements AugmentedObject
             // at this point we have a properly configured active dropship adapter module
             $this->modules[$module->getName()] = $module;
         }
-
-        $config = Shopware()->Config();
-        $this->auto = $config->get('mxcbc_dsi_auto');
-        $this->mode = $config->get('mxcbc_dsi_mode');
     }
 
     public function getService(string $supplier, string $requestedName)
@@ -307,6 +301,22 @@ class DropshipManager implements AugmentedObject
     {
         if ($sendMail) $this->sendNotificationMail($context);
         $this->logStatus($context, $order);
+    }
+
+    public function getOriginator()
+    {
+        return [
+            'COMPANY'        => $this->config->get('mxcbc_dsi_ic_company', 'vapee.de'),
+            'COMPANY2'       => $this->config->get('mxcbc_dsi_ic_department', 'maxence operations gmbh'),
+            'FIRSTNAME'      => $this->config->get('mxcbc_dsi_ic_first_name', 'Frank'),
+            'LASTNAME'       => $this->config->get('mxcbc_dsi_ic_last_name', 'Hein'),
+            'STREET_ADDRESS' => $this->config->get('mxcbc_dsi_ic_street', 'Am Weißen Stein 1'),
+            'POSTCODE'       => $this->config->get('mxcbc_dsi_ic_zip', '41541'),
+            'CITY'           => $this->config->get('mxcbc_dsi_ic_city', 'Dormagen'),
+            'COUNTRY_CODE'   => $this->config->get('mxcbc_dsi_ic_country_code', 'DE'),
+            'EMAIL'          => $this->config->get('mxcbc_dsi_ic_mail', 'info@vapee.de'),
+            'TELEPHONE'      => $this->config->get('mxcbc_dsi_ic_phone', '02133-259925')
+        ];
     }
 
     public function getSupplierOrderDetailsCount(string $supplier, int $orderId)
