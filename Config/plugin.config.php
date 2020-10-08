@@ -20,9 +20,10 @@ return [
             's_order_attributes'         => [
                 'mxcbc_dsi_ownstock' => ['type' => TypeMapping::TYPE_INTEGER],
 
-                'mxcbc_dsi_ordertype' => ['type' => TypeMapping::TYPE_INTEGER],
-                'mxcbc_dsi_status'    => ['type' => TypeMapping::TYPE_INTEGER],
-                'mxcbc_dsi_message'   => ['type' => TypeMapping::TYPE_STRING],
+                'mxcbc_dsi_ordertype'    => ['type' => TypeMapping::TYPE_INTEGER],
+                'mxcbc_dsi_status'       => ['type' => TypeMapping::TYPE_INTEGER],
+                'mxcbc_dsi_message'      => ['type' => TypeMapping::TYPE_STRING],
+                'mxcbc_dsi_tracking_ids' => ['type' => TypeMapping::TYPE_STRING],
 
             ],
             's_order_details_attributes' => [

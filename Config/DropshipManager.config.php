@@ -45,7 +45,7 @@ return [
             ],
             'updateTrackingData' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Tracking Daten konnten nicht abgerufen werden',
+                'mailSubject'       => 'maxence Dropship - Tracking Daten von {$supplier} konnten nicht abgerufen werden',
                 'mailTitle'         => 'Ungültige XML-Daten',
                 'mailBody'          => 'der Abruf von Trackinginformationen bei {$supplier} ist fehlgeschlagen. '
                                         . 'Die Antwort des Servers enthält fehlerhafte XML-Daten. '
@@ -56,7 +56,7 @@ return [
             ],
             'updateStock' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Aktualisierung des Lagerbestands fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Aktualisierung des Lagerbestands von {$supplier} fehlgeschlagen',
                 'mailTitle'         => 'Ungültige XML-Daten',
                 'mailBody'          => 'die Aktualisierung des Lagerbestands von {$supplier} ist fehlgeschlagen. '
                                        . 'Die Antwort des Servers enthält fehlerhafte XML-Daten. '
@@ -66,7 +66,7 @@ return [
             ],
             'updatePrices' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Preisaktualisierung fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Preisaktualisierung von {$supplier} fehlgeschlagen',
                 'mailTitle'         => 'Ungültige XML-Daten',
                 'mailBody'          => 'die Aktualisierung der Preise von {$supplier} ist fehlgeschlagen. '
                                         . 'Die Antwort des Servers enthält fehlerhafte XML-Daten. '
@@ -90,7 +90,7 @@ return [
             ],
             'updateTrackingData' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Tracking Daten konnten nicht abgerufen werden',
+                'mailSubject'       => 'maxence Dropship - Tracking Daten von {$supplier} konnten nicht abgerufen werden',
                 'mailTitle'         => '{$supplier} Server nicht erreichbar',
                 'mailBody'          => 'der Abruf von Trackinginformationen bei {$supplier} ist fehlgeschlagen. '
                                         . 'Der Server ist nicht erreichbar.',
@@ -100,7 +100,7 @@ return [
             ],
             'updateStock' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Aktualisierung des Lagerbestands fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Aktualisierung des Lagerbestands von {$supplier} fehlgeschlagen',
                 'mailTitle'         => '{$supplier} Server ist nicht erreichbar',
                 'mailBody'          => 'die Aktualisierung des Lagerbestands von {$supplier} ist fehlgeschlagen. '
                                         . 'Der Server ist nicht erreichbar. ',
@@ -109,7 +109,7 @@ return [
             ],
             'updatePrices' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Preisaktualisierung fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Preisaktualisierung von {$supplier} fehlgeschlagen',
                 'mailTitle'         => '{$supplier} Server ist nicht erreichbar',
                 'mailBody'          => 'die Aktualisierung der Preise von {$supplier} ist fehlgeschlagen. '
                                         . 'Der Server ist nicht erreichbar. ',
@@ -130,7 +130,7 @@ return [
             ],
             'updateTrackingData' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Tracking Daten konnten nicht abgerufen werden',
+                'mailSubject'       => 'maxence Dropship - Tracking Daten von {$supplier} konnten nicht abgerufen werden',
                 'mailTitle'         => '{$supplier} Fehlermeldungen',
                 'mailBody'          => 'der Abruf von Trackinginformationen bei {$supplier} ist fehlgeschlagen. '
                                         . 'Der Server liefert Fehlermeldungen.',
@@ -140,7 +140,7 @@ return [
             ],
             'updateStock' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Aktualisierung des Lagerbestands fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Aktualisierung des Lagerbestands von {$supplier} fehlgeschlagen',
                 'mailTitle'         => '{$supplier} Fehlermeldungen',
                 'mailBody'          => 'die Aktualisierung des Lagerbestands von {$supplier} ist fehlgeschlagen. '
                                         . 'Der Server liefert Fehlermeldungen. ',
@@ -149,7 +149,7 @@ return [
             ],
             'updatePrices' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Preisaktualisierung fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Preisaktualisierung von {$supplier} fehlgeschlagen',
                 'mailTitle'         => '{$supplier} Fehlermeldungen',
                 'mailBody'          => 'die Aktualisierung der Preise von {$supplier} ist fehlgeschlagen. '
                                         . 'Der Server liefert Fehlermeldungen. ',
@@ -160,7 +160,7 @@ return [
         'UNKNOWN_ERROR'         => [
             'sendOrder' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'Dropship-Status - {$supplier} Fehler beim Versand der Bestellung {$orderNumber}',
+                'mailSubject'       => 'Dropship-Status -  Fehler beim Versand der Bestellung {$orderNumber} an {$supplier}',
                 'mailTitle'         => 'Unbekannter Fehler',
                 'mailBody'          => 'beim Versand der Bestellung <strong>{$orderNumber}</strong> an '
                                         . '<strong>{$supplier}</strong> ist ein bisher nicht '
@@ -172,7 +172,7 @@ return [
             ],
             'updateTrackingData'    => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Abruf von Tracking Daten fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Abruf von Tracking Daten von {$supplier} fehlgeschlagen',
                 'mailTitle'         => 'Unbekannter Fehler',
                 'mailBody'          => 'beim Abruf von Trackingdaten für Bestellung <strong>{$orderNumber}</strong> '
                                         . 'ist ein bisher nicht behandelbarer Fehler ist aufgetreten. Bitte informieren '
@@ -184,7 +184,7 @@ return [
             ],
             'updateStock' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                'mailSubject'       => 'maxence Dropship - {$supplier} Aktualisierung des Lagerbestands fehlgeschlagen',
+                'mailSubject'       => 'maxence Dropship - Aktualisierung des Lagerbestands von {$supplier} fehlgeschlagen',
                 'mailTitle'         => 'Unbekannter Fehler',
                 'mailBody'          => 'bei der Aktualisierung des Lagerbestands von {$supplier} ist ein bisher nicht behandelbarer '
                                         . 'Fehler aufgetreten. Bitte informieren Sie <strong>dringend</strong> '

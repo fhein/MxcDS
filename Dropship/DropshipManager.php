@@ -147,7 +147,50 @@ class DropshipManager implements AugmentedObject
     public function updateTrackingData(array $order)
     {
         $status = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
+        $trackingIds = $this->getTrackingIds($order);
+        $this->setOrderTrackingIds($order, $trackingIds);
         return $this->setOrderStatus($order['orderID'], $status, self::ORDER_STATUS_TRACKING_DATA);
+    }
+
+    public function getTrackingIds(array $order) {
+        return $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
+    }
+
+    public function setOrderTrackingIds(array $order, array $trackingIds)
+    {
+        // create a unique list of all tracking ids from all dropship modules
+        $dropshipTrackingIds = [];
+        foreach ($trackingIds as $tracking) {
+            if (empty($tracking)) continue;
+            $dropshipTrackingIds = array_merge($dropshipTrackingIds, $tracking);
+        }
+        $dropshipTrackingIds = array_filter(array_unique($dropshipTrackingIds));
+        if (empty($dropshipTrackingIds)) return;
+
+        $swTrackingIds = $order['trackingcode'];
+        if (empty($swTrackingIds)) {
+            $swTrackingIds = $dropshipTrackingIds;
+        } else {
+            $swTrackingIds = array_map('trim', explode(',', $swTrackingIds));
+            $swTrackingIds = array_unique(array_merge($swTrackingIds, $dropshipTrackingIds));
+        }
+
+        $this->db->executeUpdate('
+            UPDATE 
+                s_order o
+            INNER JOIN
+                s_order_attributes oa ON oa.orderID = o.id
+            SET
+                o.trackingcode            = :trackingCode,
+                oa.mxcbc_dsi_tracking_ids = :trackingIds
+            WHERE                
+                o.id = :id
+            ', [
+                'trackingCode' => implode(', ', $swTrackingIds),
+                'trackingIds'  => implode(', ', $dropshipTrackingIds),
+                'id'           => $order['orderID'],
+            ]
+        );
     }
 
     public function setOrderStatus(int $orderId, array $status, int $expectedStatus)
