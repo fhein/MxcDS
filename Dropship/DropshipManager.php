@@ -193,19 +193,42 @@ class DropshipManager implements AugmentedObject
         );
     }
 
-    public function setOrderStatus(int $orderId, array $status, int $expectedStatus)
+    public function setOrderSendStatus(int $orderId, array $status)
+    {
+        $s = array_unique(array_column($status, 'status'));
+        $minStatus = min($s);
+        $maxStatus = max($s);
+        // @todo:
+        // Der alte Order-Status Mechanismus war Scheiße
+        // Wenn Module einen Mix von ORDER_SENT und ORDER_OPEN liefern, dann ist mindesten ein orderSend
+        // mit einem Fehlercode fehlgeschlagen, der einen automatischen Neuversuch auslöst, der Gesamtstatus
+        // sollte in diesem Falle ORDER_OPEN bleiben, so dass ein Neuversuch der Module, die behebbare Fehler
+        // gemeldet haben, stattfinden kann
+        // Wenn irgendein Modul einen Status mit Code > 90 liefert, dann ist ein nicht behebbarer Fehler aufgetreten.
+        // Der Gesamtstatus soll in diesem Fall den Error wiedergeben, damit kein erneuter Übermittlungsversuch
+        // stattfindet.
+        // Liefern alle Module ORDER_SENT, dann ist der Gesamtstatus ORDER_SENT
+        // Liefern alle Module ORDER_OPEN, dann haben alle Module einen behebbaren Fehler und der Gesamtstatus
+        // bleibt ORDER_OPEN
+
+        // Weiteres @todo: Die Module die erfolgreich waren, müssen auf Tracking Daten hören, auch wenn der
+        // wenn Sie ihren Teil der Order erfolgreich abgesetzt haben.
+    }
+
+    public function setOrderTrackingStatus(int $orderId, array $status)
     {
         // modules not involved in the current order processing return null, array_column silently ignores null entries
         $s = array_unique(array_column($status, 'status'));
         if (empty($s) || count($s) > 1) return true;
-
+        $status = $s[0];
         // status progress happens only if all modules return expected status or null (which means not applicable)
-        if ($s[0] != $expectedStatus) return false;
-        // remove null elements and get first (and only) status
-        // note: array_filter maintains the array indexes, so array_value is necessary to access the first element
-        $status = array_values(array_filter($status))[0];
+        if ($status != self::ORDER_STATUS_TRACKING_DATA) return false;
+        $this->setOrderStatus($orderId, ['status' => $status, 'message' => 'Dropship Tracking Daten vollständig.']);
+        return true;
+    }
 
-
+    public function setOrderStatus(int $orderId, array $status)
+    {
         $this->db->executeUpdate('
             UPDATE 
                 s_order_attributes oa
@@ -220,7 +243,6 @@ class DropshipManager implements AugmentedObject
                 'id'      => $orderId,
             ]
         );
-        return true;
     }
 
     protected function setupModule(DropshipModule $module)

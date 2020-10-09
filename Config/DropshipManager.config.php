@@ -77,7 +77,7 @@ return [
 
         ],
         DropshipException::MODULE_API_ERROR => [
-            'orderSend' => [
+            'sendOrder' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
                 'mailSubject'       => 'Dropship-Status - Bestellung {$orderNumber}: {$supplier} Schnittstelle nicht erreichbar',
                 'mailTitle'         => '{$supplier} Server nicht erreichbar',
