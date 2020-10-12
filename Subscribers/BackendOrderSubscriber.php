@@ -136,8 +136,13 @@ class BackendOrderSubscriber implements SubscriberInterface
             $this->setOrderDetailSupplier($supplier, $orderDetailId);
         }
         $this->setOrderTypeAndStatus($orderType, $args);
-        $sendOrders = MxcDropship::getServices()->get(SendOrders::class);
-        $sendOrders->run();
+        if ($orderType > DropshipManager::ORDER_TYPE_OWNSTOCK) {
+            // lazily load $dropshipManager for performance reasons
+            $dropshipManager = MxcDropship::getServices()->get(DropshipManager::class);
+            $dropshipManager->initOrder($args->orderId);
+        }
+//        $sendOrders = MxcDropship::getServices()->get(SendOrders::class);
+//        $sendOrders->run();
     }
 
     public function onOrderMailSend(Enlight_Event_EventArgs $args)
@@ -184,10 +189,10 @@ class BackendOrderSubscriber implements SubscriberInterface
     protected function setOrderDetailSupplier($supplier, $orderDetailId): void
     {
         Shopware()->Db()->executeUpdate('
-                UPDATE s_order_details_attributes oda
-                SET oda.mxcbc_dsi_supplier = :supplier
-                WHERE oda.detailID = :id
-                ', [
+            UPDATE s_order_details_attributes oda
+            SET oda.mxcbc_dsi_supplier = :supplier
+            WHERE oda.detailID = :id
+            ', [
                 'supplier' => $supplier,
                 'id'       => $orderDetailId
             ]
@@ -197,21 +202,26 @@ class BackendOrderSubscriber implements SubscriberInterface
     protected function setOrderTypeAndStatus(int $orderType, Enlight_Event_EventArgs $args): void
     {
         // If the order does not contain dropship products, drophship status is 'closed'
-        $dropshipStatus = $orderType > DropshipManager::ORDER_TYPE_OWNSTOCK
-            ? DropshipManager::ORDER_STATUS_OPEN
-            : DropshipManager::ORDER_STATUS_CLOSED;
-
+        if ($orderType > DropshipManager::ORDER_TYPE_OWNSTOCK) {
+            $dropshipStatus = DropshipManager::ORDER_STATUS_OPEN;
+            $dropshipMessage = 'Neue Dropship-Bestellung.';
+        } else {
+            $dropshipStatus = DropshipManager::ORDER_STATUS_CLOSED;
+            $dropshipMessage = 'Neue Bestellung ohne Dropship-Artikel.';
+        }
         $this->db->executeUpdate('
             UPDATE s_order_attributes oa
             SET 
                 oa.mxcbc_dsi_ordertype = :orderType,
-                oa.mxcbc_dsi_status = :dropshipStatus
+                oa.mxcbc_dsi_status = :dropshipStatus,
+                oa.mxcbc_dsi_message = :dropshipMessage
                 
             WHERE oa.orderID = :orderId
         ', [
-                'orderType'      => $orderType,
-                'dropshipStatus' => $dropshipStatus,
-                'orderId'        => $args->orderId
+                'orderType'       => $orderType,
+                'dropshipStatus'  => $dropshipStatus,
+                'dropshipMessage' => $dropshipMessage,
+                'orderId'         => $args->orderId,
             ]
         );
     }

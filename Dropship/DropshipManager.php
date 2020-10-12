@@ -52,6 +52,7 @@ class DropshipManager implements AugmentedObject
     // dropship order cancelled by supplier
     const ORDER_STATUS_CANCELLED = 4;
 
+    CONST ORDER_STATUS_ERROR = 90;
     // Auftrag konnte nicht übertragen werden, Auftrag wird ignoriert, manuelles Eingreifen erforderlich
     const ORDER_STATUS_POSITION_ERROR = 99;
     const ORDER_STATUS_ADDRESS_ERROR = 98;
@@ -119,11 +120,6 @@ class DropshipManager implements AugmentedObject
         return $service;
     }
 
-    public function isAuto()
-    {
-        return $this->auto;
-    }
-
     public function updatePrices()
     {
         $result = $this->events->trigger(__FUNCTION__, $this)->toArray();
@@ -137,19 +133,24 @@ class DropshipManager implements AugmentedObject
         return array_unique($result)[0];
     }
 
+    public function initOrder(int $orderId)
+    {
+        $this->events->trigger(__FUNCTION__, $this, ['orderId' => $orderId]);
+    }
+
     // Important: order ID is $order['orderID'], e.g. not $order['id']
     public function sendOrder(array $order)
     {
-        $status = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
-        return $this->setOrderStatus($order['orderID'], $status, self::ORDER_STATUS_SENT);
+        $context = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
+        return $this->setOrderSendStatus($order, $context);
     }
 
     public function updateTrackingData(array $order)
     {
-        $status = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
+        $context = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
         $trackingIds = $this->getTrackingIds($order);
         $this->setOrderTrackingIds($order, $trackingIds);
-        return $this->setOrderStatus($order['orderID'], $status, self::ORDER_STATUS_TRACKING_DATA);
+        return $this->setOrderTrackingStatus($order['orderID'],$context);
     }
 
     public function getTrackingIds(array $order) {
@@ -193,41 +194,78 @@ class DropshipManager implements AugmentedObject
         );
     }
 
-    public function setOrderSendStatus(int $orderId, array $status)
+    public function setOrderSendStatus(array $order, array $contexts)
     {
-        $s = array_unique(array_column($status, 'status'));
+        $nrModules = count($contexts);
+        // remove null entries
+        $contexts = array_filter($contexts);
+        // nothing to do
+        if (empty($contexts)) return true;
+
+        // if there is only a single dropship module
+        if ($nrModules == 1) {
+            $context = $contexts[0];
+            if ($context['status'] > self::ORDER_STATUS_ERROR && $context['recoverable'] === true) {
+                $context['status'] = self::ORDER_STATUS_OPEN;
+            }
+            $this->setOrderStatus($order, $context);
+            return $context['status'] == self::ORDER_STATUS_SENT;
+        }
+
+        // multiple dropship modules
+        // at least two different non null $contexts available
+
+        // handle success
+        $s = array_unique(array_column($contexts, 'status'));
         $minStatus = min($s);
         $maxStatus = max($s);
-        // @todo:
-        // Der alte Order-Status Mechanismus war Scheiße
-        // Wenn Module einen Mix von ORDER_SENT und ORDER_OPEN liefern, dann ist mindesten ein orderSend
-        // mit einem Fehlercode fehlgeschlagen, der einen automatischen Neuversuch auslöst, der Gesamtstatus
-        // sollte in diesem Falle ORDER_OPEN bleiben, so dass ein Neuversuch der Module, die behebbare Fehler
-        // gemeldet haben, stattfinden kann
-        // Wenn irgendein Modul einen Status mit Code > 90 liefert, dann ist ein nicht behebbarer Fehler aufgetreten.
-        // Der Gesamtstatus soll in diesem Fall den Error wiedergeben, damit kein erneuter Übermittlungsversuch
-        // stattfindet.
-        // Liefern alle Module ORDER_SENT, dann ist der Gesamtstatus ORDER_SENT
-        // Liefern alle Module ORDER_OPEN, dann haben alle Module einen behebbaren Fehler und der Gesamtstatus
-        // bleibt ORDER_OPEN
+        // all module returned ORDER_STATUS_SENT
+        if ($minStatus == $maxStatus && $maxStatus == self::ORDER_STATUS_SENT) {
+            $context = $contexts[0];
+            $context['message'] = 'Dropship Auftrag erfolgreich versandt.';
+            $this->setOrderStatus($order, $context);
+            return true;
+        }
 
-        // Weiteres @todo: Die Module die erfolgreich waren, müssen auf Tracking Daten hören, auch wenn der
-        // wenn Sie ihren Teil der Order erfolgreich abgesetzt haben.
+        // handle errors
+        // at least one module returned an error code, which may be revocerable or not
+        $errorMessage = 'Beim Versand des Dropship Auftrags ist ein Fehler aufgetreten. Siehe Log. ';
+        foreach ($contexts as $context) {
+            $status = $context['status'];
+            if ($status == self::ORDER_STATUS_SENT) continue;
+            if ($status > self::ORDER_STATUS_ERROR)  {
+                if ($context['recoverable'] === true) {
+                    $context['message'] = $errorMessage . 'Automatischer Neuversuch';
+                } else {
+                    $context['message'] = $errorMessage . 'Manuelles Eingreifen erforderlich.';
+                    break;
+                }
+            }
+        }
+        $this->setOrderStatus($order, $context);
+        return false;
     }
 
-    public function setOrderTrackingStatus(int $orderId, array $status)
+    public function setOrderTrackingStatus(array $order, array $context)
     {
         // modules not involved in the current order processing return null, array_column silently ignores null entries
-        $s = array_unique(array_column($status, 'status'));
+        $s = array_unique(array_column($context, 'status'));
         if (empty($s) || count($s) > 1) return true;
-        $status = $s[0];
+        $context = $s[0];
         // status progress happens only if all modules return expected status or null (which means not applicable)
-        if ($status != self::ORDER_STATUS_TRACKING_DATA) return false;
-        $this->setOrderStatus($orderId, ['status' => $status, 'message' => 'Dropship Tracking Daten vollständig.']);
+        if ($context != self::ORDER_STATUS_TRACKING_DATA) return false;
+        $context['message'] = 'Dropship Tracking Daten vollständig.';
+        $this->setOrderStatus($order, $context);
         return true;
     }
 
-    public function setOrderStatus(int $orderId, array $status)
+    public function setOrderStatus(array $order, array $context)
+    {
+        $status = $context['recoverable'] ? $order['mxcbc_dsi_status'] : $context['status'];
+        $this->dbSetOrderStatus($order['orderID'], $status, $context['message']);
+    }
+
+    protected function dbSetOrderStatus(int $orderId, int $status, string $message)
     {
         $this->db->executeUpdate('
             UPDATE 
@@ -238,8 +276,8 @@ class DropshipManager implements AugmentedObject
             WHERE                
                 oa.orderID = :id
             ', [
-                'status'  => $status['status'],
-                'message' => $status['message'],
+                'status'  => $status,
+                'message' => $message,
                 'id'      => $orderId,
             ]
         );
@@ -445,15 +483,6 @@ class DropshipManager implements AugmentedObject
                 $context['errors'] = [['code' => $e->getCode(), 'message' => $e->getMessage()]];
         }
         $this->notifyStatus($context, $order, $sendMail);
-        return [
-            'status' => $context['status'],
-            'message' => $context['message'],
-        ];
-    }
-
-    public function notifyOrderSuccessfullySent(string $supplier, string $caller, array $order)
-    {
-        $context = $this->getNotificationContext($supplier, $caller, 'STATUS_SUCCESS', $order);
-        $this->notifyStatus($context, $order);
+        return $context;
     }
 }
