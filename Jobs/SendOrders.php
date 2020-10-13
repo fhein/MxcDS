@@ -19,14 +19,18 @@ class SendOrders implements AugmentedObject
         $newDropshipOrders = $this->db->fetchAll('
             SELECT * FROM s_order o 
             LEFT JOIN s_order_attributes oa ON oa.orderID = o.id 
-            WHERE o.cleared = ? AND oa.mxcbc_dsi_ordertype > 1 AND oa.mxcbc_dsi_status = 0
-            ', [ Status::PAYMENT_STATE_COMPLETELY_PAID ]
-        );
-        $newDropshipOrders = $this->db->fetchAll('
-            SELECT * FROM s_order o 
-            LEFT JOIN s_order_attributes oa ON oa.orderID = o.id 
-            WHERE oa.mxcbc_dsi_ordertype > 1 AND oa.mxcbc_dsi_status = 0
-        ');
+            WHERE o.cleared = :paymentStatus AND oa.mxcbc_dsi_ordertype > 1 AND oa.mxcbc_dsi_status = :dropshipStatus
+        ', [
+            'paymentStatus' => Status::PAYMENT_STATE_COMPLETELY_PAID,
+            'dropshipStatus' => DropshipManager::DROPSHIP_STATUS_OPEN
+        ]);
+//        $newDropshipOrders = $this->db->fetchAll('
+//            SELECT * FROM s_order o
+//            LEFT JOIN s_order_attributes oa ON oa.orderID = o.id
+//            WHERE oa.mxcbc_dsi_ordertype > 1 AND oa.mxcbc_dsi_status = :dropshipStatus
+//        ', [
+//            'dropshipStatus' => DropshipManager::DROPSHIP_STATUS_OPEN
+//        ]);
         if (empty($newDropshipOrders)) return;
         /** @var DropshipManager $dropshipManager */
         $dropshipManager = $this->services->get(DropshipManager::class);

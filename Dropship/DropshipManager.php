@@ -38,28 +38,24 @@ class DropshipManager implements AugmentedObject
     const ORDER_TYPE_DROPSHIP = 2;
 
     // new dropship order, not transmitted to supplier
-    const ORDER_STATUS_OPEN = 0;
+    const DROPSHIP_STATUS_OPEN = 0;
 
     // dropship order succeessfully submitted, waiting for tracking data
-    const ORDER_STATUS_SENT = 1;
+    const DROPSHIP_STATUS_SENT = 1;
 
-    // tracking data received
-    const ORDER_STATUS_TRACKING_DATA = 2;
-
-    // dropship order closed (success)
-    const ORDER_STATUS_CLOSED = 3;
+    // tracking data received, job done
+    const DROPSHIP_STATUS_CLOSED = 2;
 
     // dropship order cancelled by supplier
-    const ORDER_STATUS_CANCELLED = 4;
+    const DROPSHIP_STATUS_CANCELLED = 3;
 
-    CONST ORDER_STATUS_ERROR = 90;
-    // Auftrag konnte nicht übertragen werden, Auftrag wird ignoriert, manuelles Eingreifen erforderlich
-    const ORDER_STATUS_POSITION_ERROR = 99;
-    const ORDER_STATUS_ADDRESS_ERROR = 98;
-    const ORDER_STATUS_XML_ERROR = 97;
-    const ORDER_STATUS_SUPPLIER_ERROR = 96;
-    const ORDER_STATUS_UNKNOWN_ERROR = 95;
-    const ORDER_STATUS_API_ERROR = 94;
+    const DROPSHIP_STATUS_ERROR = 90;
+    const DROPSHIP_STATUS_POSITION_ERROR = 99;
+    const DROPSHIP_STATUS_ADDRESS_ERROR = 98;
+    const DROPSHIP_STATUS_XML_ERROR = 97;
+    const DROPSHIP_STATUS_SUPPLIER_ERROR = 96;
+    const DROPSHIP_STATUS_UNKNOWN_ERROR = 95;
+    const DROPSHIP_STATUS_API_ERROR = 94;
 
     // delivery modes
     const MODE_OWNSTOCK_ONLY = 0;
@@ -120,6 +116,36 @@ class DropshipManager implements AugmentedObject
         return $service;
     }
 
+    // requires an order record containing up to date data
+    public function getDropshipStatus(array $order)
+    {
+        return $order['mxcbc_dsi_status'];
+    }
+
+    public function isTrackingDataComplete(array $order)
+    {
+        $orderType = $order['mxcbc_dsi_ordertype'];
+        $dropshipStatus = $order['mxcbc_dsi_status'];
+
+        if ($orderType == self::ORDER_TYPE_DROPSHIP) {
+            // true after all dropship modules delivered their tracking data
+            return $dropshipStatus == self::DROPSHIP_STATUS_CLOSED;
+        }
+        $trackingCodes = explode(',', $order['trackingcode']);
+        if ($orderType == self::ORDER_TYPE_OWNSTOCK) {
+            // if there is a tracking code then tracking data is complete
+            return (! empty($trackingCode));
+        }
+        // order with products from own stock and dropship products
+        if ($dropshipStatus != self::DROPSHIP_STATUS_CLOSED) {
+            return false;
+        }
+        $dropshipCodes = explode(',', $order['trackingcode']);
+        // if there are more tracking codes available than provided by dropship modules
+        // then own stock tracking codes must be available, too
+        return (count($dropshipCodes) < count($trackingCodes));
+    }
+
     public function updatePrices()
     {
         $result = $this->events->trigger(__FUNCTION__, $this)->toArray();
@@ -142,31 +168,36 @@ class DropshipManager implements AugmentedObject
     public function sendOrder(array $order)
     {
         $context = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
-        return $this->setOrderSendStatus($order, $context);
+        return $this->setSendOrderStatus($order, $context);
     }
 
     public function updateTrackingData(array $order)
     {
         $context = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
         $trackingIds = $this->getTrackingIds($order);
-        $this->setOrderTrackingIds($order, $trackingIds);
-        return $this->setOrderTrackingStatus($order['orderID'],$context);
+        $this->setTrackingIds($order, $trackingIds);
+        return $this->setUpdateTrackingDataStatus($order, $context);
     }
 
-    public function getTrackingIds(array $order) {
+    public function getTrackingIds(array $order)
+    {
         return $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
     }
 
-    public function setOrderTrackingIds(array $order, array $trackingIds)
+    public function setTrackingIds(array $order, array $trackingIds)
     {
         // create a unique list of all tracking ids from all dropship modules
         $dropshipTrackingIds = [];
         foreach ($trackingIds as $tracking) {
-            if (empty($tracking)) continue;
+            if (empty($tracking)) {
+                continue;
+            }
             $dropshipTrackingIds = array_merge($dropshipTrackingIds, $tracking);
         }
         $dropshipTrackingIds = array_filter(array_unique($dropshipTrackingIds));
-        if (empty($dropshipTrackingIds)) return;
+        if (empty($dropshipTrackingIds)) {
+            return;
+        }
 
         $swTrackingIds = $order['trackingcode'];
         if (empty($swTrackingIds)) {
@@ -194,22 +225,24 @@ class DropshipManager implements AugmentedObject
         );
     }
 
-    public function setOrderSendStatus(array $order, array $contexts)
+    public function setSendOrderStatus(array $order, array $contexts)
     {
         $nrModules = count($contexts);
         // remove null entries
         $contexts = array_filter($contexts);
         // nothing to do
-        if (empty($contexts)) return true;
+        if (empty($contexts)) {
+            return true;
+        }
 
         // if there is only a single dropship module
         if ($nrModules == 1) {
             $context = $contexts[0];
-            if ($context['status'] > self::ORDER_STATUS_ERROR && $context['recoverable'] === true) {
-                $context['status'] = self::ORDER_STATUS_OPEN;
+            if ($context['status'] > self::DROPSHIP_STATUS_ERROR && $context['recoverable'] === true) {
+                $context['status'] = self::DROPSHIP_STATUS_OPEN;
             }
-            $this->setOrderStatus($order, $context);
-            return $context['status'] == self::ORDER_STATUS_SENT;
+            $this->setDropshipStatus($order, $context);
+            return $context['status'] == self::DROPSHIP_STATUS_SENT;
         }
 
         // multiple dropship modules
@@ -219,11 +252,11 @@ class DropshipManager implements AugmentedObject
         $s = array_unique(array_column($contexts, 'status'));
         $minStatus = min($s);
         $maxStatus = max($s);
-        // all module returned ORDER_STATUS_SENT
-        if ($minStatus == $maxStatus && $maxStatus == self::ORDER_STATUS_SENT) {
+        // all module returned DROPSHIP_STATUS_SENT
+        if ($minStatus == $maxStatus && $maxStatus == self::DROPSHIP_STATUS_SENT) {
             $context = $contexts[0];
             $context['message'] = 'Dropship Auftrag erfolgreich versandt.';
-            $this->setOrderStatus($order, $context);
+            $this->setDropshipStatus($order, $context);
             return true;
         }
 
@@ -232,8 +265,10 @@ class DropshipManager implements AugmentedObject
         $errorMessage = 'Beim Versand des Dropship Auftrags ist ein Fehler aufgetreten. Siehe Log. ';
         foreach ($contexts as $context) {
             $status = $context['status'];
-            if ($status == self::ORDER_STATUS_SENT) continue;
-            if ($status > self::ORDER_STATUS_ERROR)  {
+            if ($status == self::DROPSHIP_STATUS_SENT) {
+                continue;
+            }
+            if ($status > self::DROPSHIP_STATUS_ERROR) {
                 if ($context['recoverable'] === true) {
                     $context['message'] = $errorMessage . 'Automatischer Neuversuch';
                 } else {
@@ -242,30 +277,34 @@ class DropshipManager implements AugmentedObject
                 }
             }
         }
-        $this->setOrderStatus($order, $context);
+        $this->setDropshipStatus($order, $context);
         return false;
     }
 
-    public function setOrderTrackingStatus(array $order, array $context)
+    public function setUpdateTrackingDataStatus(array $order, array $contexts)
     {
         // modules not involved in the current order processing return null, array_column silently ignores null entries
-        $s = array_unique(array_column($context, 'status'));
-        if (empty($s) || count($s) > 1) return true;
-        $context = $s[0];
+        $s = array_unique(array_column($contexts, 'status'));
+        if (empty($s) || count($s) > 1) {
+            return true;
+        }
         // status progress happens only if all modules return expected status or null (which means not applicable)
-        if ($context != self::ORDER_STATUS_TRACKING_DATA) return false;
+        if ($s[0] != self::DROPSHIP_STATUS_CLOSED) {
+            return false;
+        }
+        $context = array_values($contexts)[0];
         $context['message'] = 'Dropship Tracking Daten vollständig.';
-        $this->setOrderStatus($order, $context);
+        $this->setDropshipStatus($order, $context);
         return true;
     }
 
-    public function setOrderStatus(array $order, array $context)
+    public function setDropshipStatus(array $order, array $context)
     {
         $status = $context['recoverable'] ? $order['mxcbc_dsi_status'] : $context['status'];
-        $this->dbSetOrderStatus($order['orderID'], $status, $context['message']);
+        $this->dbSetDropshipStatus($order['orderID'], $status, $context['message']);
     }
 
-    protected function dbSetOrderStatus(int $orderId, int $status, string $message)
+    protected function dbSetDropshipStatus(int $orderId, int $status, string $message)
     {
         $this->db->executeUpdate('
             UPDATE 
@@ -338,7 +377,9 @@ class DropshipManager implements AugmentedObject
     public function getNotificationContext(string $supplier, string $caller, $key, array $order = null)
     {
         $context = @$this->classConfig['notification_context'][$key][$caller];
-        if ($context === null) return null;
+        if ($context === null) {
+            return null;
+        }
 
         $replacements = [
             '{$orderNumber}' => @$order['ordernumber'] ?? '',
@@ -402,7 +443,9 @@ class DropshipManager implements AugmentedObject
     // send status mail and add log entries
     public function notifyStatus(array $context, array $order = null, bool $sendMail = true)
     {
-        if ($sendMail) $this->sendNotificationMail($context);
+        if ($sendMail) {
+            $this->sendNotificationMail($context);
+        }
         $this->logStatus($context, $order);
     }
 

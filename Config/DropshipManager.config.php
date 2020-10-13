@@ -15,7 +15,7 @@ return [
                 'mailBody'          => 'der Dropship-Auftrag zur Bestellung <strong>{$orderNumber}</strong> kann nicht versandt werden, da einzelne Bestellpositionen fehlerhaft sind.',
                 'message'           => 'Dropship-Auftrag nicht übertragen: Fehler in den Bestellpositionen. Siehe Log.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_POSITION_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_POSITION_ERROR,
                 'recoverable'       => false,
             ]
         ],
@@ -28,7 +28,7 @@ return [
                 'mailBody'          => 'der Dropship-Auftrag zur Bestellung <strong>{$orderNumber}</strong> kann nicht versandt werden, da die Lieferaddresse Fehler aufweist.',
                 'message'           => 'Dropship-Auftrag nicht übertragen. Fehler in der Lieferadresse. Siehe Log.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_ADDRESS_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_ADDRESS_ERROR,
                 'recoverable'       => false,
             ]
         ],
@@ -43,7 +43,7 @@ return [
                                         . 'Bitte kontaktieren Sie {$supplier}.',
                 'message'           => 'Dropship-Auftrag übertragen. Status unbekannt. Ungültige XML-Antwort erhalten. Kontaktieren Sie {$supplier}.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_XML_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_XML_ERROR,
                 'recoverable'       => false,
             ],
             'updateTrackingData' => [
@@ -55,7 +55,7 @@ return [
                                         . 'Bitte kontaktieren Sie {$supplier}.',
                 'message'           => 'Abruf von Trackingdaten fehlgeschlagen. {$supplier} Server lieferte ungültige XML-Daten.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_XML_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_XML_ERROR,
                 'recoverable'       => true,
             ],
             'updateStock' => [
@@ -90,7 +90,7 @@ return [
                                        . 'erforderlich. Die Übertragung wird wiederholt. Kontaktieren Sie {$supplier}.',
                 'message'           => 'Dropship-Auftrag nicht übertragen. {$supplier} Server nicht erreichbar. Automatischer Neuversuch.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_API_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_API_ERROR,
                 'recoverable'       => true,
             ],
             'updateTrackingData' => [
@@ -101,7 +101,7 @@ return [
                                         . 'Der Server ist nicht erreichbar.',
                 'message'           => 'Abruf von Trackingdaten fehlgeschlagen. {$supplier} Server ist nicht erreichbar.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_API_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_API_ERROR,
                 'recoverable'       => true,
             ],
             'updateStock' => [
@@ -132,7 +132,7 @@ return [
                                        . 'übertragen werden. Der {$supplier} Server meldet Fehler.',
                 'message'           => 'Dropship-Auftrag konnte nicht übertragen werden. Großhändler meldet Fehler. Siehe Log.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_SUPPLIER_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_SUPPLIER_ERROR,
                 'recoverable'       => false,
             ],
             'updateTrackingData' => [
@@ -143,7 +143,7 @@ return [
                                         . 'Der Server liefert Fehlermeldungen.',
                 'message'           => 'Abruf von Trackingdaten fehlgeschlagen. {$supplier} meldet Fehler.',
                 'severity'          => DropshipLogger::ERR,
-                'status'            => DropshipManager::ORDER_STATUS_SUPPLIER_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_SUPPLIER_ERROR,
                 'recoverable'       => true,
             ],
             'updateStock' => [
@@ -176,7 +176,7 @@ return [
                                         . 'informieren Sie <strong>dringend</strong> die Entwickler des Dropship Moduls.',
                 'message'           => 'Bisher nicht behandelter Fehler: Dropship-Status unklar. Informieren Sie den Entwickler.',
                 'severity'          => DropshipLogger::CRIT,
-                'status'            => DropshipManager::ORDER_STATUS_UNKNOWN_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_UNKNOWN_ERROR,
                 'recoverable'       => false,
             ],
             'updateTrackingData'    => [
@@ -189,7 +189,7 @@ return [
                 'message'           => 'Bisher nicht behandelter Fehler: Abruf von Trackingdaten fehlgeschlagen. '
                                         . 'Bitte informieren Sie den Entwickler.',
                 'severity'          => DropshipLogger::CRIT,
-                'status'            => DropshipManager::ORDER_STATUS_UNKNOWN_ERROR,
+                'status'            => DropshipManager::DROPSHIP_STATUS_UNKNOWN_ERROR,
                 'recoverable'       => true,
             ],
             'updateStock' => [
@@ -224,7 +224,7 @@ return [
                                         . 'an {$supplier} übertragen. Warte auf Tracking-Daten. ',
                 'message'           => 'Dropship-Auftrag wurde erfolgreich an {$supplier} übertragen.',
                 'severity'          => DropshipLogger::NOTICE,
-                'status'            => DropshipManager::ORDER_STATUS_SENT,
+                'status'            => DropshipManager::DROPSHIP_STATUS_SENT,
                 'recoverable'       => false,
             ],
             'updateTrackingData' => [
@@ -235,7 +235,7 @@ return [
                                         . 'Informationen von {$supplier} vor.',
                 'message'           => 'Tracking Informationen erhalten.',
                 'severity'          => DropshipLogger::NOTICE,
-                'status'            => DropshipManager::ORDER_STATUS_TRACKING_DATA,
+                'status'            => DropshipManager::DROPSHIP_STATUS_CLOSED,
                 'recoverable'       => false,
             ]
         ],
@@ -249,7 +249,7 @@ return [
                                         . '{$supplier} storniert. Bitte informieren Sie den Kunden.',
                 'message'           => 'Dropship-Auftrag wurde von {$supplier} storniert.',
                 'severity'          => DropshipLogger::WARN,
-                'status'            => DropshipManager::ORDER_STATUS_CANCELLED,
+                'status'            => DropshipManager::DROPSHIP_STATUS_CANCELLED,
                 'recoverable'       => false,
             ]
         ],

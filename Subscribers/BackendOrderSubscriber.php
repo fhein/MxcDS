@@ -203,10 +203,10 @@ class BackendOrderSubscriber implements SubscriberInterface
     {
         // If the order does not contain dropship products, drophship status is 'closed'
         if ($orderType > DropshipManager::ORDER_TYPE_OWNSTOCK) {
-            $dropshipStatus = DropshipManager::ORDER_STATUS_OPEN;
+            $dropshipStatus = DropshipManager::DROPSHIP_STATUS_OPEN;
             $dropshipMessage = 'Neue Dropship-Bestellung.';
         } else {
-            $dropshipStatus = DropshipManager::ORDER_STATUS_CLOSED;
+            $dropshipStatus = DropshipManager::DROPSHIP_STATUS_CLOSED;
             $dropshipMessage = 'Neue Bestellung ohne Dropship-Artikel.';
         }
         $this->db->executeUpdate('

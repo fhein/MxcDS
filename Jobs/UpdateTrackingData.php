@@ -20,7 +20,7 @@ class UpdateTrackingData implements AugmentedObject
             LEFT JOIN s_order_attributes oa ON oa.orderID = o.id 
             WHERE oa.mxcbc_dsi_ordertype > 1 AND oa.mxcbc_dsi_status = :status
             ', [
-                'status'        => DropshipManager::ORDER_STATUS_SENT
+                'status'        => DropshipManager::DROPSHIP_STATUS_SENT
             ]
         );
         if (empty($sentDropshipOrders)) return ([true]);
