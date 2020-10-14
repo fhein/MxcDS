@@ -49,6 +49,9 @@ class DropshipManager implements AugmentedObject
     // dropship order cancelled by supplier
     const DROPSHIP_STATUS_CANCELLED = 3;
 
+    // order does not contain dropship products
+    const DROPSHIP_STATUS_INACTIVE = 4;
+
     const DROPSHIP_STATUS_ERROR = 90;
     const DROPSHIP_STATUS_POSITION_ERROR = 99;
     const DROPSHIP_STATUS_ADDRESS_ERROR = 98;

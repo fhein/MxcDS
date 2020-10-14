@@ -5,6 +5,7 @@
 
 namespace MxcDropship\Subscribers;
 
+use ClassesWithParents\D;
 use Enlight\Event\SubscriberInterface;
 use Enlight_Event_EventArgs;
 use MxcCommons\Plugin\Service\Logger;
@@ -18,6 +19,21 @@ use Enlight_Components_Db_Adapter_Pdo_Mysql;
 
 class BackendOrderSubscriber implements SubscriberInterface
 {
+    protected $initialStatus = [
+        DropshipManager::ORDER_TYPE_OWNSTOCK                                        => [
+            'status'  => DropshipManager::DROPSHIP_STATUS_INACTIVE,
+            'message' => 'Nicht aktiv.',
+        ],
+        DropshipManager::ORDER_TYPE_DROPSHIP                                        => [
+            'status'  => DropshipManager::DROPSHIP_STATUS_OPEN,
+            'message' => 'Dropship-Auftrag wartend. Wird versandt, wenn vollständig bezahlt',
+
+        ],
+        DropshipManager::ORDER_TYPE_DROPSHIP | DropshipManager::ORDER_TYPE_OWNSTOCK => [
+            'status'  => DropshipManager::DROPSHIP_STATUS_OPEN,
+            'message' => 'Dropship-Auftrag wartend. Wird versandt, wenn vollständig bezahlt.'
+        ]
+    ];
 
     /** @var Enlight_Components_Db_Adapter_Pdo_Mysql */
     private $db;
@@ -25,7 +41,7 @@ class BackendOrderSubscriber implements SubscriberInterface
     /** @var Logger */
     private $log;
 
-    /** @var Shopware_Components_Config  */
+    /** @var Shopware_Components_Config */
     private $config;
 
     public function __construct()
@@ -41,15 +57,15 @@ class BackendOrderSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-            'Shopware_Modules_Order_SendMail_Send'                              => 'onOrderMailSend',
-            'Shopware_Modules_Order_SaveOrder_OrderCreated'                     => 'onOrderCreated',
+            'Shopware_Modules_Order_SendMail_Send'          => 'onOrderMailSend',
+            'Shopware_Modules_Order_SaveOrder_OrderCreated' => 'onOrderCreated',
 
-// next two moved to MxcDropshipInnocigs
-//            'Enlight_Controller_Action_PostDispatch_Backend_Order'              => 'onBackendOrderPostDispatch',
-//            'Enlight_Controller_Dispatcher_ControllerPath_Backend_MxcDropship'  => 'onGetControllerPath',
+            'Enlight_Controller_Action_PostDispatch_Backend_Order'             => 'onBackendOrderPostDispatch',
+            'Enlight_Controller_Dispatcher_ControllerPath_Backend_MxcDropship' => 'onGetControllerPath',
 
-//            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
-//            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
+            // not needed currently
+            //            'Shopware_Controllers_Backend_Order::savePositionAction::after' => 'onSavePositionActionAfter',
+            //            'Shopware_Controllers_Backend_Order::saveAction::after'         => 'onSaveActionAfter',
         ];
     }
 
@@ -122,7 +138,9 @@ class BackendOrderSubscriber implements SubscriberInterface
         $orderType = 0;
         foreach ($args->details as $idx => $item) {
             $articleId = $item['articleID'];
-            if (empty($articleId)) continue;
+            if (empty($articleId)) {
+                continue;
+            }
             $orderDetailId = $item['orderDetailId'];
             $attr = $item['additional_details'];
             $supplier = $attr['mxcbc_dsi_supplier'];
@@ -169,7 +187,9 @@ class BackendOrderSubscriber implements SubscriberInterface
     {
         $orderType = 0;
         foreach ($context['sOrderDetails'] as &$detail) {
-            if (! array_key_exists('additional_details', $detail)) continue;
+            if (! array_key_exists('additional_details', $detail)) {
+                continue;
+            }
             $supplier = $detail['additional_details']['mxcbc_dsi_supplier'];
             if ($supplier === null) {
                 $detail['additional_details']['mxcbc_dsi_supplier'] = $this->config->get('shopName');
@@ -202,13 +222,7 @@ class BackendOrderSubscriber implements SubscriberInterface
     protected function setOrderTypeAndStatus(int $orderType, Enlight_Event_EventArgs $args): void
     {
         // If the order does not contain dropship products, drophship status is 'closed'
-        if ($orderType > DropshipManager::ORDER_TYPE_OWNSTOCK) {
-            $dropshipStatus = DropshipManager::DROPSHIP_STATUS_OPEN;
-            $dropshipMessage = 'Neue Dropship-Bestellung.';
-        } else {
-            $dropshipStatus = DropshipManager::DROPSHIP_STATUS_CLOSED;
-            $dropshipMessage = 'Neue Bestellung ohne Dropship-Artikel.';
-        }
+        $initialStatus = $this->initialStatus[$orderType];
         $this->db->executeUpdate('
             UPDATE s_order_attributes oa
             SET 
@@ -219,10 +233,58 @@ class BackendOrderSubscriber implements SubscriberInterface
             WHERE oa.orderID = :orderId
         ', [
                 'orderType'       => $orderType,
-                'dropshipStatus'  => $dropshipStatus,
-                'dropshipMessage' => $dropshipMessage,
+                'dropshipStatus'  => $initialStatus['status'],
+                'dropshipMessage' => $initialStatus['message'],
                 'orderId'         => $args->orderId,
             ]
         );
     }
+
+    // this is the backend gui
+    public function onBackendOrderPostDispatch(Enlight_Event_EventArgs $args)
+    {
+        $request = $args->getRequest();
+        $action = $request->getActionName();
+
+        if ($action == 'save') {
+            return;
+        }
+        $view = $args->getSubject()->View();
+        if ($action == 'getList') {
+            $orderList = $view->getAssign('data');
+            foreach ($orderList as &$order) {
+                $bullet = $this->getBullet($order);
+                $order['mxcbc_dropship_bullet_background_color'] = $bullet['color'];
+                $order['mxcbc_dropship_bullet_title'] = $bullet['message'] ?? '';
+            }
+            $view->clearAssign('data');
+            $view->assign('data', $orderList);
+        }
+
+        $view->extendsTemplate('backend/mxc_dropship/order/view/detail/overview.js');
+        $view->extendsTemplate('backend/mxc_dropship/order/view/list/list.js');
+    }
+
+    public function getBullet(array $order)
+    {
+        $attr = $this->db->fetchAll(
+            'SELECT oa.mxcbc_dsi_ordertype as orderType from s_order_attributes oa WHERE oa.orderID = :orderId',
+            ['orderId' => $order['id']]
+        )[0];
+        $orderType = $attr['orderType'];
+        $bullet = null;
+        if ($orderType & DropshipManager::ORDER_TYPE_OWNSTOCK) {
+            $bullet = [
+                'color' => 'PaleVioletRed',
+                'message' => 'Bestellung enthält Produkte aus eigenem Lager.',
+            ];
+        }
+        return $bullet;
+    }
+
+    protected function getPanels()
+    {
+        return $this->panels ?? $this->panels = MxcDropship::getPanelConfig();
+    }
+
 }

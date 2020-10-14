@@ -54,7 +54,7 @@ class MxcDropship extends Plugin {
             'message'    => 'Bestellung erfolgreich versandt. Warte auf Tracking-Daten.'
         ],
         DropshipManager::DROPSHIP_STATUS_CLOSED => [
-            'background' => 'LimeGreen',
+            'background' => 'DarkSeaGreen',
             'text'       => 'White',
             'message'    => 'Dropship-Auftrag erfolgreich abgeschlossen.'
         ],
@@ -64,9 +64,19 @@ class MxcDropship extends Plugin {
             'message'    => 'Es sind keine Dropship Module installiert.'
         ],
         'OWNSTOCK_ONLY' => [
-            'background' => 'MidnightBlue',
+            'background' => 'PaleVioletRed',
             'text'       => 'White',
-            'message'    => 'Die Bestellung enthält keine Dropship-Artikel.'
+            'message'    => 'Bestellung ohne Dropship-Artikel.'
+        ],
+        'DROPSHIP_OWNSTOCK' => [
+            'background' => 'PaleVioletRed',
+            'text'       => 'White',
+            'message'    => 'Bestellung enthält Dropship-Artikel und Artikel aus eigenem Lager.'
+        ],
+        'DROPSHIP_ONLY' => [
+            'background' => 'LightSteelBlue',
+            'text'       => 'Black',
+            'message'    => 'Bestellung enthält ausschließlich Dropship-Artikel.'
         ]
     ];
 
