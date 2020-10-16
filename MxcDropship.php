@@ -77,6 +77,11 @@ class MxcDropship extends Plugin {
             'background' => 'LightSteelBlue',
             'text'       => 'Black',
             'message'    => 'Bestellung enthält ausschließlich Dropship-Artikel.'
+        ],
+        'DROPSHIP_SCHEDULED' => [
+            'background' => 'DeepSkyBlue',
+            'text'       => 'Black',
+            'message'    => 'Zum Versand an Großhändler vorgemerkt.'
         ]
     ];
 

@@ -12,6 +12,7 @@ use MxcCommons\ServiceManager\AugmentedObject;
 use MxcDropship\Exception\DropshipException;
 use MxcDropship\Models\DropshipModule;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
+use Shopware\Models\Order\Status;
 use Throwable;
 use Shopware_Components_Config;
 
@@ -119,10 +120,13 @@ class DropshipManager implements AugmentedObject
         return $service;
     }
 
-    // requires an order record containing up to date data
-    public function getDropshipStatus(array $order)
+    // returns true if dropship status indicates an error
+    // or if order was cancelled by supplier
+    public function isClarificationRequired(array $order)
     {
-        return $order['mxcbc_dsi_status'];
+        $status = $order['mxcbc_dsi_status'];
+        $isError = $status > DropshipManager::DROPSHIP_STATUS_ERROR;
+        return $isError || $status == DropshipManager::DROPSHIP_STATUS_CANCELLED;
     }
 
     public function isTrackingDataComplete(array $order)
@@ -167,9 +171,17 @@ class DropshipManager implements AugmentedObject
         $this->events->trigger(__FUNCTION__, $this, ['orderId' => $orderId]);
     }
 
+    public function isScheduledOrder(array $order) {
+        $isDropshipOrder = $order['mxcbc_dsi_ordertype'] != DropshipManager::ORDER_TYPE_OWNSTOCK;
+        $dropshipStatusOpen = $order['mxcbc_dsi_status'] == DropshipManager::DROPSHIP_STATUS_OPEN;
+        $isCompletelyPaid = Status::PAYMENT_STATE_COMPLETELY_PAID == $order['cleared'];
+        return $isDropshipOrder && $dropshipStatusOpen && $isCompletelyPaid;
+    }
+
     // Important: order ID is $order['orderID'], e.g. not $order['id']
     public function sendOrder(array $order)
     {
+        if (! $this->isScheduledOrder($order)) return true;
         $context = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
         return $this->setSendOrderStatus($order, $context);
     }

@@ -243,7 +243,7 @@ return [
             // can only occur on updateTrackingData
             'updateTrackingData' => [
                 'mailTemplate'      => 'sMxcDsiDropshipStatus',
-                    'mailSubject'       => 'Bestellung {$orderNumber} von {$supplier} storniert',
+                'mailSubject'       => 'Bestellung {$orderNumber} von {$supplier} storniert',
                 'mailTitle'         => 'Bestellung durch {$supplier} storniert',
                 'mailBody'          => 'die Bestellung mit der Nummer <strong>{$orderNumber}</strong> wurde von '
                                         . '{$supplier} storniert. Bitte informieren Sie den Kunden.',
