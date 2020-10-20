@@ -3,7 +3,9 @@
 namespace MxcDropship\Dropship;
 
 use MxcCommons\Interop\Container\ContainerInterface;
+use MxcCommons\MxcCommons;
 use MxcCommons\ServiceManager\Factory\FactoryInterface;
+use MxcCommons\Toolbox\Shopware\MailTool;
 
 class DropshipManagerFactory implements FactoryInterface
 {
@@ -11,6 +13,7 @@ class DropshipManagerFactory implements FactoryInterface
     {
         $dropshipLogger = $container->get(DropshipLogger::class);
         $config = Shopware()->Config();
-        return new DropshipManager($dropshipLogger, $config);
+        $mailer = MxcCommons::getServices()->get(MailTool::class);
+        return new DropshipManager($dropshipLogger, $mailer, $config);
     }
 }

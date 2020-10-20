@@ -9,6 +9,7 @@ use MxcCommons\Plugin\Service\DatabaseAwareTrait;
 use MxcCommons\Plugin\Service\LoggerAwareTrait;
 use MxcCommons\Plugin\Service\ModelManagerAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
+use MxcCommons\Toolbox\Shopware\MailTool;
 use MxcDropship\Exception\DropshipException;
 use MxcDropship\Models\DropshipModule;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
@@ -24,6 +25,23 @@ class DropshipManager implements AugmentedObject
     use ClassConfigAwareTrait;
     use LoggerAwareTrait;
 
+    // initial order status depends on order type
+    protected $initialOrderStatus = [
+        DropshipManager::ORDER_TYPE_OWNSTOCK                                        => [
+            'status'  => DropshipManager::DROPSHIP_STATUS_INACTIVE,
+            'message' => 'Nicht aktiv.',
+        ],
+        DropshipManager::ORDER_TYPE_DROPSHIP                                        => [
+            'status'  => DropshipManager::DROPSHIP_STATUS_OPEN,
+            'message' => 'Dropship-Auftrag wartend. Wird versandt, wenn vollständig bezahlt',
+
+        ],
+        DropshipManager::ORDER_TYPE_DROPSHIP | DropshipManager::ORDER_TYPE_OWNSTOCK => [
+            'status'  => DropshipManager::DROPSHIP_STATUS_OPEN,
+            'message' => 'Dropship-Auftrag wartend. Wird versandt, wenn vollständig bezahlt.'
+        ]
+    ];
+
     protected $moduleServices = [
         'DropshipEventListener',
         'ArticleRegistry',
@@ -31,8 +49,6 @@ class DropshipManager implements AugmentedObject
         'OrderProcessor',
         'DropshippersCompanion',
     ];
-
-    const NO_ERROR = 0;
 
     // bit flags to mark an order as ownstock or dropship or both
     const ORDER_TYPE_OWNSTOCK = 1;
@@ -77,12 +93,15 @@ class DropshipManager implements AugmentedObject
 
     protected $dropshipLogger;
 
+    protected $mailer;
+
     protected $config;
 
-    public function __construct(DropshipLogger $dropshipLogger, Shopware_Components_Config $config)
+    public function __construct(DropshipLogger $dropshipLogger, MailTool $mailer, Shopware_Components_Config $config)
     {
         $this->dropshipLogger = $dropshipLogger;
         $this->config = $config;
+        $this->mailer = $mailer;
     }
 
     public function init()
@@ -121,6 +140,7 @@ class DropshipManager implements AugmentedObject
     }
 
     // returns true if dropship status indicates an error
+
     // or if order was cancelled by supplier
     public function isClarificationRequired(array $order)
     {
@@ -128,7 +148,6 @@ class DropshipManager implements AugmentedObject
         $isError = $status > DropshipManager::DROPSHIP_STATUS_ERROR;
         return $isError || $status == DropshipManager::DROPSHIP_STATUS_CANCELLED;
     }
-
     public function isTrackingDataComplete(array $order)
     {
         $orderType = $order['mxcbc_dsi_ordertype'];
@@ -166,9 +185,40 @@ class DropshipManager implements AugmentedObject
         return array_unique($result)[0];
     }
 
-    public function initOrder(int $orderId)
+    public function initOrder(int $orderId, bool $resetError = false)
     {
-        $this->events->trigger(__FUNCTION__, $this, ['orderId' => $orderId]);
+        // @todo: Test resetError behaviour
+        $order = $this->getOrder($orderId);
+        $currentStatus = $order['mxcbc_dsi_status'];
+        $isErrorStatus = $currentStatus > self::DROPSHIP_STATUS_ERROR;
+        if ($currentStatus != self::DROPSHIP_STATUS_OPEN && ! $isErrorStatus) {
+            // dropship order was successfully processed already
+            return;
+        }
+        $orderType = 0;
+        if (empty($order)) return;
+        $details = $this->getOrderDetails($orderId);
+        foreach ($details as $detail) {
+            $articleDetailID = $detail['articleDetailID'];
+            if (empty($articleDetailID)) continue;
+            $orderDetailId = $detail['detailID'];
+            $article = $this->getArticleDetail($articleDetailID);
+            $supplier = $article['mxcbc_dsi_supplier'];
+            if ($supplier === null) {
+                $orderType |= self::ORDER_TYPE_OWNSTOCK;
+                $supplier = $this->config->get('shopName');
+            } else {
+                $orderType |= self::ORDER_TYPE_DROPSHIP;
+            }
+            $this->setOrderDetailSupplier($supplier, $orderDetailId);
+        }
+        if (! $isErrorStatus || $resetError) {
+            $this->setOrderTypeAndStatus($orderId, $orderType);
+        } else {
+            $this->setOrderType($orderId, $orderType);
+        }
+
+        $this->events->trigger(__FUNCTION__, $this, ['order' => $order, 'resetError' => $resetError]);
     }
 
     public function isScheduledOrder(array $order) {
@@ -413,20 +463,6 @@ class DropshipManager implements AugmentedObject
         return $context;
     }
 
-    public function sendNotificationMail(array $context)
-    {
-        $dsMail = Shopware()->TemplateMail()->createMail($context['mailTemplate'], $context);
-        $dsMail->addTo('support@vapee.de');
-        $dsMail->clearFrom();
-        $dsMail->setFrom('info@vapee.de', 'vapee.de Dropship');
-        if (isset($context['mailSubject'])) {
-            $dsMail->clearSubject();
-            $dsMail->setSubject($context['mailSubject']);
-        }
-        $dsMail->send();
-
-    }
-
     public function logStatus(array $context, array $order = null)
     {
         $this->dropshipLogger->log(
@@ -456,10 +492,10 @@ class DropshipManager implements AugmentedObject
     }
 
     // send status mail and add log entries
-    public function notifyStatus(array $context, array $order = null, bool $sendMail = true)
+    public function notifyStatus(array $context, array $order, bool $sendMail = true)
     {
         if ($sendMail) {
-            $this->sendNotificationMail($context);
+            $this->mailer->sendNotificationMail($order['orderID'], $context, $this->classConfig['notification_address']);
         }
         $this->logStatus($context, $order);
     }
@@ -542,5 +578,105 @@ class DropshipManager implements AugmentedObject
         }
         $this->notifyStatus($context, $order, $sendMail);
         return $context;
+    }
+
+    public function getOrderDetails(int $orderId)
+    {
+        return $this->db->fetchAll('
+            SELECT 
+                * 
+            FROM 
+                s_order_details od
+            LEFT JOIN 
+                s_order_details_attributes oda ON oda.detailID = od.id
+            WHERE 
+                od.orderID = :orderId
+        ', ['orderId' => $orderId]);
+    }
+
+    protected function setOrderDetailSupplier($supplier, $orderDetailId): void
+    {
+        Shopware()->Db()->executeUpdate('
+            UPDATE 
+                s_order_details_attributes oda
+            SET 
+                oda.mxcbc_dsi_supplier = :supplier
+            WHERE 
+                oda.detailID = :id
+            ', [
+                'supplier' => $supplier,
+                'id'       => $orderDetailId
+            ]
+        );
+    }
+
+    protected function getArticleDetail(int $articleId)
+    {
+        return $this->db->fetchRow('
+            SELECT 
+                * 
+            FROM 
+                s_articles_details ad
+            LEFT JOIN 
+                s_articles_attributes ada ON ada.articledetailsID = ad.id
+            WHERE 
+                ad.id = :articleId
+        ', ['articleId' => $articleId]);
+    }
+
+    protected function setOrderTypeAndStatus(int $orderId, int $orderType): void
+    {
+        // If the order does not contain dropship products, drophship status is 'closed'
+        $initialStatus = $this->initialOrderStatus[$orderType];
+        $this->db->executeUpdate('
+            UPDATE s_order_attributes oa
+            SET 
+                oa.mxcbc_dsi_ordertype = :orderType,
+                oa.mxcbc_dsi_status    = :dropshipStatus,
+                oa.mxcbc_dsi_message   = :dropshipMessage
+                
+            WHERE oa.orderID = :orderId
+        ', [
+                'orderType'       => $orderType,
+                'dropshipStatus'  => $initialStatus['status'],
+                'dropshipMessage' => $initialStatus['message'],
+                'orderId'         => $orderId,
+            ]
+        );
+    }
+
+    protected function setOrderType(int $orderId, int $orderType)
+    {
+        $this->db->executeUpdate('
+            UPDATE s_order_attributes oa
+            SET 
+                oa.mxcbc_dsi_ordertype = :orderType
+            WHERE oa.orderID = :orderId
+        ', [
+                'orderType'       => $orderType,
+                'orderId'         => $orderId,
+            ]
+        );
+    }
+
+    protected function getOrder(int $orderId)
+    {
+        return $this->db->fetchRow(
+            'SELECT * FROM s_order o LEFT JOIN s_order_attributes oa ON oa.orderID = o.id WHERE o.id = :orderId',
+            [
+                'orderId' => $orderId,
+            ]
+        );
+    }
+
+
+    public function getMailAddress()
+    {
+        return $this->classConfig['notification_address'];
+    }
+
+    public function getInitialOrderStatus()
+    {
+        return $this->initialOrderStatus;
     }
 }

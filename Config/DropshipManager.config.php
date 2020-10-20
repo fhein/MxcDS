@@ -5,6 +5,15 @@ use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Exception\DropshipException;
 
 return [
+    'notification_address' => [
+        'from' => [
+            'name' => 'vapee.de Dropship',
+            'email' => 'info@vapee.de',
+        ],
+        'to'   => [
+            'support@vapee.de'
+        ]
+    ],
     'notification_context' => [
         DropshipException::ORDER_POSITIONS_ERROR => [
             // can only occur on orderSend
