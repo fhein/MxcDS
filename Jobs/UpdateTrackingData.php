@@ -6,7 +6,6 @@ use MxcCommons\Plugin\Service\DatabaseAwareTrait;
 use MxcCommons\Plugin\Service\ServicesAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
 use MxcDropship\Dropship\DropshipManager;
-use Shopware\Models\Order\Status;
 
 class UpdateTrackingData implements AugmentedObject
 {
@@ -27,9 +26,14 @@ class UpdateTrackingData implements AugmentedObject
     protected function getSentDropshipOrders()
     {
         return $this->db->fetchAll('
-            SELECT * FROM s_order o 
-            LEFT JOIN s_order_attributes oa ON oa.orderID = o.id 
-            WHERE oa.mxcbc_dsi_ordertype > :ownStockType AND oa.mxcbc_dsi_status = :status
+            SELECT 
+                * 
+            FROM 
+                s_order o 
+            LEFT JOIN 
+                s_order_attributes oa ON oa.orderID = o.id 
+            WHERE 
+                oa.mxcbc_dsi_ordertype > :ownStockType AND oa.mxcbc_dsi_status = :status
             ', [
                 'status'        => DropshipManager::DROPSHIP_STATUS_SENT,
                 'ownStockType'  => DropshipManager::ORDER_TYPE_OWNSTOCK,

@@ -3,6 +3,8 @@
 namespace MxcDropship\Dropship;
 
 use MxcCommons\EventManager\EventManagerAwareTrait;
+use MxcCommons\EventManager\ListenerAggregateInterface;
+use MxcCommons\EventManager\ListenerAggregateTrait;
 use MxcCommons\Plugin\Plugin;
 use MxcCommons\Plugin\Service\ClassConfigAwareTrait;
 use MxcCommons\Plugin\Service\DatabaseAwareTrait;
@@ -10,6 +12,7 @@ use MxcCommons\Plugin\Service\LoggerAwareTrait;
 use MxcCommons\Plugin\Service\ModelManagerAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
 use MxcCommons\Toolbox\Shopware\MailTool;
+use MxcCommons\Toolbox\Shopware\OrderTool;
 use MxcDropship\Exception\DropshipException;
 use MxcDropship\Models\DropshipModule;
 use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
@@ -87,21 +90,29 @@ class DropshipManager implements AugmentedObject
 
     protected $modules = [];
 
-    protected $sharedEvents;
-
     protected $moduleIdsByName;
 
+    /** @var DropshipLogger  */
     protected $dropshipLogger;
 
+    /** @var MailTool */
     protected $mailer;
+
+    /** @var OrderTool */
+    protected $orderTool;
 
     protected $config;
 
-    public function __construct(DropshipLogger $dropshipLogger, MailTool $mailer, Shopware_Components_Config $config)
+    public function __construct(
+        DropshipLogger $dropshipLogger,
+        MailTool $mailer,
+        OrderTool $orderTool,
+        Shopware_Components_Config $config)
     {
         $this->dropshipLogger = $dropshipLogger;
         $this->config = $config;
         $this->mailer = $mailer;
+        $this->orderTool = $orderTool;
     }
 
     public function init()
@@ -187,8 +198,7 @@ class DropshipManager implements AugmentedObject
 
     public function initOrder(int $orderId, bool $resetError = false)
     {
-        // @todo: Test resetError behaviour
-        $order = $this->getOrder($orderId);
+        $order = $this->orderTool->getOrder($orderId);
         $currentStatus = $order['mxcbc_dsi_status'];
         $isErrorStatus = $currentStatus > self::DROPSHIP_STATUS_ERROR;
         if ($currentStatus != self::DROPSHIP_STATUS_OPEN && ! $isErrorStatus) {
@@ -197,7 +207,7 @@ class DropshipManager implements AugmentedObject
         }
         $orderType = 0;
         if (empty($order)) return;
-        $details = $this->getOrderDetails($orderId);
+        $details = $this->orderTool->getOrderDetails($orderId);
         foreach ($details as $detail) {
             $articleDetailID = $detail['articleDetailID'];
             if (empty($articleDetailID)) continue;
@@ -222,9 +232,9 @@ class DropshipManager implements AugmentedObject
     }
 
     public function isScheduledOrder(array $order) {
-        $isDropshipOrder = $order['mxcbc_dsi_ordertype'] != DropshipManager::ORDER_TYPE_OWNSTOCK;
+        $isDropshipOrder    = $order['mxcbc_dsi_ordertype'] != DropshipManager::ORDER_TYPE_OWNSTOCK;
         $dropshipStatusOpen = $order['mxcbc_dsi_status'] == DropshipManager::DROPSHIP_STATUS_OPEN;
-        $isCompletelyPaid = Status::PAYMENT_STATE_COMPLETELY_PAID == $order['cleared'];
+        $isCompletelyPaid   = $order['cleared'] == Status::PAYMENT_STATE_COMPLETELY_PAID;
         return $isDropshipOrder && $dropshipStatusOpen && $isCompletelyPaid;
     }
 
@@ -435,8 +445,9 @@ class DropshipManager implements AugmentedObject
             }
         }
         // enable dropship module event listening
+        /** @var ListenerAggregateInterface $listener */
         $listener = $services->get('DropshipEventListener');
-        $listener->attach($this->events->getSharedManager());
+        $listener->attach($this->events);
     }
 
     public function getNotificationContext(string $supplier, string $caller, $key, array $order = null)
@@ -580,20 +591,6 @@ class DropshipManager implements AugmentedObject
         return $context;
     }
 
-    public function getOrderDetails(int $orderId)
-    {
-        return $this->db->fetchAll('
-            SELECT 
-                * 
-            FROM 
-                s_order_details od
-            LEFT JOIN 
-                s_order_details_attributes oda ON oda.detailID = od.id
-            WHERE 
-                od.orderID = :orderId
-        ', ['orderId' => $orderId]);
-    }
-
     protected function setOrderDetailSupplier($supplier, $orderDetailId): void
     {
         Shopware()->Db()->executeUpdate('
@@ -610,7 +607,7 @@ class DropshipManager implements AugmentedObject
         );
     }
 
-    protected function getArticleDetail(int $articleId)
+    protected function getArticleDetail(int $detailId)
     {
         return $this->db->fetchRow('
             SELECT 
@@ -621,7 +618,7 @@ class DropshipManager implements AugmentedObject
                 s_articles_attributes ada ON ada.articledetailsID = ad.id
             WHERE 
                 ad.id = :articleId
-        ', ['articleId' => $articleId]);
+        ', ['articleId' => $detailId]);
     }
 
     protected function setOrderTypeAndStatus(int $orderId, int $orderType): void
@@ -655,16 +652,6 @@ class DropshipManager implements AugmentedObject
         ', [
                 'orderType'       => $orderType,
                 'orderId'         => $orderId,
-            ]
-        );
-    }
-
-    protected function getOrder(int $orderId)
-    {
-        return $this->db->fetchRow(
-            'SELECT * FROM s_order o LEFT JOIN s_order_attributes oa ON oa.orderID = o.id WHERE o.id = :orderId',
-            [
-                'orderId' => $orderId,
             ]
         );
     }

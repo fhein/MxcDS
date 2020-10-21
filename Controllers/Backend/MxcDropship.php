@@ -66,6 +66,13 @@ class Shopware_Controllers_Backend_MxcDropship extends Shopware_Controllers_Back
         ', ['orderId' => $orderId])[0];
     }
 
+    public function resetDropshipErrorAction()
+    {
+        $orderId = $this->Request()->getParam('orderId');
+        $dropshipManager = MxcDropship::getServices()->get(DropshipManager::class);
+        $dropshipManager->initOrder($orderId, true);
+    }
+
     protected function getDb() {
         return $this->db ?? $this->db = MxcDropship::getServices()->get('db');
     }

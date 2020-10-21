@@ -6,6 +6,7 @@ use MxcCommons\Interop\Container\ContainerInterface;
 use MxcCommons\MxcCommons;
 use MxcCommons\ServiceManager\Factory\FactoryInterface;
 use MxcCommons\Toolbox\Shopware\MailTool;
+use MxcCommons\Toolbox\Shopware\OrderTool;
 
 class DropshipManagerFactory implements FactoryInterface
 {
@@ -13,7 +14,9 @@ class DropshipManagerFactory implements FactoryInterface
     {
         $dropshipLogger = $container->get(DropshipLogger::class);
         $config = Shopware()->Config();
-        $mailer = MxcCommons::getServices()->get(MailTool::class);
-        return new DropshipManager($dropshipLogger, $mailer, $config);
+        $mxcCommons = MxcCommons::getServices();
+        $mailer = $mxcCommons->get(MailTool::class);
+        $orderTool = $mxcCommons->get(OrderTool::class);
+        return new DropshipManager($dropshipLogger, $mailer, $orderTool, $config);
     }
 }
