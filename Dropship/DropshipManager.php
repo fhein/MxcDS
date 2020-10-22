@@ -4,7 +4,6 @@ namespace MxcDropship\Dropship;
 
 use MxcCommons\EventManager\EventManagerAwareTrait;
 use MxcCommons\EventManager\ListenerAggregateInterface;
-use MxcCommons\EventManager\ListenerAggregateTrait;
 use MxcCommons\Plugin\Plugin;
 use MxcCommons\Plugin\Service\ClassConfigAwareTrait;
 use MxcCommons\Plugin\Service\DatabaseAwareTrait;
@@ -168,10 +167,10 @@ class DropshipManager implements AugmentedObject
             // true after all dropship modules delivered their tracking data
             return $dropshipStatus == self::DROPSHIP_STATUS_CLOSED;
         }
-        $trackingCodes = explode(',', $order['trackingcode']);
+        $trackingCodes = array_filter(array_map('trim', explode(',', $order['trackingcode'])));
         if ($orderType == self::ORDER_TYPE_OWNSTOCK) {
             // if there is a tracking code then tracking data is complete
-            return (! empty($trackingCode));
+            return ! empty($trackingCodes);
         }
         // order with products from own stock and dropship products
         if ($dropshipStatus != self::DROPSHIP_STATUS_CLOSED) {
@@ -231,6 +230,11 @@ class DropshipManager implements AugmentedObject
         $this->events->trigger(__FUNCTION__, $this, ['order' => $order, 'resetError' => $resetError]);
     }
 
+    public function deleteDropshipLog(int $orderId)
+    {
+        $this->db->query('DELETE FROM s_mxcbc_dropship_log WHERE order_id = :orderId', ['orderId' => $orderId]);
+    }
+
     public function isScheduledOrder(array $order) {
         $isDropshipOrder    = $order['mxcbc_dsi_ordertype'] != DropshipManager::ORDER_TYPE_OWNSTOCK;
         $dropshipStatusOpen = $order['mxcbc_dsi_status'] == DropshipManager::DROPSHIP_STATUS_OPEN;
@@ -242,6 +246,10 @@ class DropshipManager implements AugmentedObject
     public function sendOrder(array $order)
     {
         if (! $this->isScheduledOrder($order)) return true;
+        $orderId = $order['orderID'];
+        $this->initOrder($orderId);
+        // reload order because it may have been modified
+        $order = $this->orderTool->getOrder($orderId);
         $context = $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
         return $this->setSendOrderStatus($order, $context);
     }

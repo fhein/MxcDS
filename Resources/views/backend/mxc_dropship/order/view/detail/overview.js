@@ -98,10 +98,14 @@ Ext.override(Shopware.apps.Order.view.detail.Overview, {
                         orderId: me.record.data.id
                     },
                     success: function(response) {
-                        Ext.MessageBox.alert('maxence Dropship', 'Dropship-Fehler wurden zurückgesetzt. Setzen Sie den Bestellstatus auf Offen, um den Auftrag erneut zu versenden.');
+                        Ext.MessageBox.alert('maxence Dropship', 'Dropship-Fehler wurden zurückgesetzt. Setzen '
+                          + 'Sie den Bestellstatus auf \'In Bearbeitung\' zurück, um den Auftrag erneut zu versenden.'
+                        );
                     },
                     failure: function(response){
-                        Ext.MessageBox.alert('maxence Dropship - Fehler', 'Dropship-Fehler konnte nicht zurückgesetzt werden.');
+                        Ext.MessageBox.alert('maxence Dropship', 'Dropship-Fehler konnte nicht zurückgesetzt werden. '
+                          + 'Bitte wenden Sie sich an den Support.'
+                        );
                     }
                 });
             }

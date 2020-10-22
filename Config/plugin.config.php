@@ -8,9 +8,13 @@ use MxcDropship\Jobs\SendOrders;
 use MxcDropship\Jobs\UpdateTrackingData;
 use MxcDropship\Models\DropshipLogEntry;
 use MxcDropship\Models\DropshipModule;
+use MxcDropship\PluginListeners\DropshipMailTemplateInstaller;
 use Shopware\Bundle\AttributeBundle\Service\TypeMapping;
 
 return [
+    'plugin_listeners'   => [
+        DropshipMailTemplateInstaller::class,
+    ],
     'doctrine' => [
         'models'     => [
             DropshipModule::class,
@@ -18,6 +22,7 @@ return [
         ],
         'attributes' => [
             's_order_attributes'         => [
+                // to save own stock on maxence Dropship install
                 'mxcbc_dsi_ownstock' => ['type' => TypeMapping::TYPE_INTEGER],
 
                 'mxcbc_dsi_ordertype'    => ['type' => TypeMapping::TYPE_INTEGER],
