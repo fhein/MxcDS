@@ -32,7 +32,7 @@ class SendOrders implements AugmentedObject
     public function run(array $inProgessOrders = null)
     {
         // get list of new dropship orders and return if none is found
-        $inProgressOrders = $inProgessOrders ?? $this->orderTool->getOrdersByStatus(Status::ORDER_STATE_IN_PROCESS);
+        $inProgressOrders = $inProgessOrders ?? $this->orderTool->getOrdersByOrderStatus(Status::ORDER_STATE_IN_PROCESS);
         if (empty($inProgressOrders)) return;
         $dropshipManager = $this->services->get(DropshipManager::class);
         foreach ($inProgressOrders as $newDropshipOrder) {

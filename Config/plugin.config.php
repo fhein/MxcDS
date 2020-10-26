@@ -9,11 +9,15 @@ use MxcDropship\Jobs\UpdateTrackingData;
 use MxcDropship\Models\DropshipLogEntry;
 use MxcDropship\Models\DropshipModule;
 use MxcDropship\PluginListeners\DropshipMailTemplateInstaller;
+use MxcDropship\WorkflowActions\CheckTrackingData;
+use MxcDropship\WorkflowActions\SendOrder;
 use Shopware\Bundle\AttributeBundle\Service\TypeMapping;
 
 return [
     'plugin_listeners'   => [
         DropshipMailTemplateInstaller::class,
+        SendOrder::class,
+        CheckTrackingData::class,
     ],
     'doctrine' => [
         'models'     => [

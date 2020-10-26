@@ -2,7 +2,7 @@
 
 namespace MxcDropship\PluginListeners;
 
-use MxcCommons\Plugin\Mail\MailManager;
+use MxcCommons\Plugin\Mail\MailTemplateManager;
 use MxcCommons\Plugin\Service\ClassConfigAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
 use Shopware\Components\Plugin\Context\InstallContext;
@@ -14,7 +14,7 @@ class DropshipMailTemplateInstaller implements AugmentedObject
 
     protected $mailManager;
 
-    public function __construct(MailManager $mailManager)
+    public function __construct(MailTemplateManager $mailManager)
     {
         $this->mailManager = $mailManager;
     }
