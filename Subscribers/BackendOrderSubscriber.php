@@ -12,8 +12,8 @@ use MxcCommons\Plugin\Service\Logger;
 use MxcCommons\Toolbox\Shopware\MailTool;
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\MxcDropship;
-use MxcVapee\MxcVapee;
-use MxcVapee\Workflow\WorkflowEngine;
+use MxcWorkflow\MxcWorkflow;
+use MxcWorkflow\Workflow\WorkflowEngine;
 use Shopware_Components_Config;
 use Enlight_Hook_HookArgs;
 use Enlight_Components_Db_Adapter_Pdo_Mysql;
@@ -53,17 +53,17 @@ class BackendOrderSubscriber implements SubscriberInterface
     public static function getSubscribedEvents()
     {
         return [
-//            'Shopware_Modules_Order_SendMail_Send'          => 'onOrderMailSend',
-//            'Shopware_Modules_Order_SaveOrder_OrderCreated' => 'onOrderCreated',
-//
-//            'Enlight_Controller_Action_PostDispatch_Backend_Order'             => 'onBackendOrderPostDispatch',
-//            'Enlight_Controller_Action_PreDispatch_Backend_Order'              => 'onBackendOrderPreDispatch',
-//            'Enlight_Controller_Dispatcher_ControllerPath_Backend_MxcDropship' => 'onGetControllerPath',
-//
-//            // recalculate the dropship settings if the order gets modified in the backend
-//            'Shopware_Controllers_Backend_Order::savePositionAction::after'    => 'onSavePositionActionAfter',
-//            'Shopware_Controllers_Backend_Order::deletePositionAction::after'  => 'onDeletePositionActionAfter',
-//            'Shopware_Controllers_Backend_Order::saveAction::after'            => 'onSaveActionAfter',
+            'Shopware_Modules_Order_SendMail_Send'          => 'onOrderMailSend',
+            'Shopware_Modules_Order_SaveOrder_OrderCreated' => 'onOrderCreated',
+
+            'Enlight_Controller_Action_PostDispatch_Backend_Order'             => 'onBackendOrderPostDispatch',
+            'Enlight_Controller_Action_PreDispatch_Backend_Order'              => 'onBackendOrderPreDispatch',
+            'Enlight_Controller_Dispatcher_ControllerPath_Backend_MxcDropship' => 'onGetControllerPath',
+
+            // recalculate the dropship settings if the order gets modified in the backend
+            'Shopware_Controllers_Backend_Order::savePositionAction::after'    => 'onSavePositionActionAfter',
+            'Shopware_Controllers_Backend_Order::deletePositionAction::after'  => 'onDeletePositionActionAfter',
+            'Shopware_Controllers_Backend_Order::saveAction::after'            => 'onSaveActionAfter',
         ];
     }
 
@@ -102,7 +102,7 @@ class BackendOrderSubscriber implements SubscriberInterface
 
         // @todo: Should be attached via SharedEventManager
         if (class_exists(WorkflowEngine::class)) {
-            $engine = MxcVapee::getServices()->get(WorkflowEngine::class);
+            $engine = MxcWorkflow::getServices()->get(WorkflowEngine::class);
             $engine->run();
         }
     }

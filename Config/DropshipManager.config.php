@@ -11,7 +11,7 @@ return [
             'email' => 'info@vapee.de',
         ],
         'to'   => [
-            'support@vapee.de'
+            'info@vapee.de'
         ]
     ],
     'notification_context' => [

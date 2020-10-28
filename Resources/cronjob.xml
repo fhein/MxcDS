@@ -5,11 +5,10 @@
     <cronjob>
         <name>maxence Dropship - Bestellung versenden</name>
         <action>Shopware_CronJob_MxcDropshipOrderSend</action>
-        <active>true</active>
+        <active>false</active>
         <interval>300</interval>
         <disableOnError>false</disableOnError>
     </cronjob>
-
     <cronjob>
         <name>maxence Dropship - Sendungsverfolgung</name>
         <action>Shopware_CronJob_MxcDropshipTrackingDataUpdate</action>
@@ -17,7 +16,6 @@
         <interval>3600</interval>
         <disableOnError>false</disableOnError>
     </cronjob>
-
     <cronjob>
         <name>maxence Dropship - Bestandsaktualisierung</name>
         <action>Shopware_CronJob_MxcDropshipStockUpdate</action>
@@ -25,7 +23,6 @@
         <interval>1200</interval>
         <disableOnError>false</disableOnError>
     </cronjob>
-
     <cronjob>
         <name>maxence Dropship - Preisaktualisierung</name>
         <action>Shopware_CronJob_MxcDropshipPriceUpdate</action>
@@ -33,7 +30,6 @@
         <interval>14400</interval>
         <disableOnError>false</disableOnError>
     </cronjob>
-
     <cronjob>
         <name>maxence Dropship - Alte Log Dateien löschen</name>
         <action>Shopware_CronJob_MxcDropshipDeleteLogs</action>
@@ -41,5 +37,4 @@
         <interval>86400</interval>
         <disableOnError>true</disableOnError>
     </cronjob>
-
 </cronjobs>

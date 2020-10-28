@@ -176,7 +176,7 @@ class DropshipManager implements AugmentedObject
         if ($dropshipStatus != self::DROPSHIP_STATUS_CLOSED) {
             return false;
         }
-        $dropshipCodes = explode(',', $order['trackingcode']);
+        $dropshipCodes = explode(',', $order['mxcbc_dsi_tracking_ids']);
         // if there are more tracking codes available than provided by dropship modules
         // then own stock tracking codes must be available, too
         return (count($dropshipCodes) < count($trackingCodes));

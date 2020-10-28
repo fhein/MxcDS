@@ -8,7 +8,7 @@ Ext.define('Shopware.apps.MxcDropship.order.view.list.List', {
 
     let columns = me.callOverridden(arguments);
     return Ext.Array.insert(columns, 0, [{
-      header: 'DS',
+      header: 'L',
       width: 30,
       sortable: false,
       renderer: me.getMxcDropshipColumn

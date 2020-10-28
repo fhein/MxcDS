@@ -250,7 +250,7 @@ return [
                                                                                             Die Bestellung enthält ausschließlich Produkte aus dem Lager von {config name=shopName}.
                                                                                         {elseif $mxcbc_dsi.orderType == 2}
                                                                                             Die Bestellung enthält ausschließlich Dropship-Produkte.
-                                                                                        {elseif $mxcbc_dsi.orderNumber == 3}
+                                                                                        {elseif $mxcbc_dsi.orderType == 3}
                                                                                             Die Bestellung enthält sowohl Dropship-Produkte als auch Produkte aus dem Lager von {config name=shopName}.
                                                                                         {/if}
                                                                                     </multiline>
