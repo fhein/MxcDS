@@ -824,6 +824,53 @@ return [
 																			</td>
 																		</tr>
 																		{/if}
+																		{if $margin}
+																		<tr>
+																			<td align="center" mc:edit="title1" style="font-size: 28px; font-family: Helvetica, Arial, sans-serif;" class="main-header">
+																				<multiline>Dropship Marge</multiline>
+																			</td>
+																		</tr>
+																		<tr>
+																			<td height="20"/>
+																		</tr>
+																		<tr>
+																			<td align="center" mc:edit="subtitle1" style="font-size: 15px; font-family: Helvetica, Arial, sans-serif;" class="main-subheader">
+																				<multiline>
+																					Einkaufspreis netto: {$cost} €<br/>
+																					Verkaufspreis netto: {$price} €
+																				</multiline>
+																			</td>
+																		</tr>
+     																	<tr>
+																			<td height="20"/>
+																		</tr>
+																	    <tr>
+																			<td align="center" mc:edit="subtitle1" style="font-size: 15px; font-family: Helvetica, Arial, sans-serif;" class="main-subheader">
+																				<multiline>
+																					Erlös netto: {$revenue} €<br/>
+																					<strong>Marge: {$margin} %</strong>
+																				</multiline>
+																			</td>
+																		</tr>
+     
+																		<tr>
+																			<td>
+																				<table border="0" width="240" align="center" cellpadding="0" cellspacing="0" class="container">
+																					<tr>
+																						<td height="40"/>
+																					</tr>
+																					<tr>
+																						<td align="center">
+																							<img src="https://www.vapee.de/custom/plugins/MxcDropship/Resources/images/divider.png" editable="true" width="240" height="4" style="display: block;" alt="divider"/>
+																						</td>
+																					</tr>
+																					<tr>
+																						<td height="40"/>
+																					</tr>
+																				</table>
+																			</td>
+																		</tr>
+																		{/if}
 																	</table>
 																</td>
 															</tr>
