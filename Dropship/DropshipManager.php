@@ -242,6 +242,12 @@ class DropshipManager implements AugmentedObject
         return $isDropshipOrder && $dropshipStatusOpen && $isCompletelyPaid;
     }
 
+    public function getCost(int $orderId)
+    {
+        $order = $this->orderTool->getOrder($orderId);
+        return $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
+    }
+
     // Important: order ID is $order['orderID'], e.g. not $order['id']
     public function sendOrder(array $order)
     {
