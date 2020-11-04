@@ -24,7 +24,7 @@ class SendOrder extends WorkflowAction
 
     public function run(EventInterface $e)
     {
-        $order = $e->getParam('order');
-        $this->dropshipManager->sendOrder($order);
+        $orderId = $e->getParam('orderID');
+        $this->dropshipManager->sendOrder($orderId);
     }
 }

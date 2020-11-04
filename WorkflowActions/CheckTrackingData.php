@@ -35,15 +35,15 @@ class CheckTrackingData extends WorkflowAction
 
     public function run(EventInterface $e)
     {
-        $order = $e->getParam('order');
         /** @var WorkflowEngine $engine */
         $engine = $e->getTarget();
-        $orderId = $order['orderID'];
-        if ($this->dropshipManager->isClarificationRequired($order)) {
+        $orderId = $e->getParam('orderID');
+
+        if ($this->dropshipManager->isClarificationRequired($orderId)) {
             $engine->setOrderStatus($orderId, Status::ORDER_STATE_CLARIFICATION_REQUIRED);
             return;
         }
-        $trackingDataComplete = $this->dropshipManager->isTrackingDataComplete($order);
+        $trackingDataComplete = $this->dropshipManager->isTrackingDataComplete($orderId);
         if (! $trackingDataComplete) return;
 
         $this->dropshipManager->deleteDropshipLog($orderId);
@@ -51,6 +51,7 @@ class CheckTrackingData extends WorkflowAction
         $statusId = Status::ORDER_STATE_COMPLETED;
         $engine->setOrderStatus($orderId, $statusId);
         $engine->sendStatusMail($orderId, $statusId, [DocumentRenderer::DOC_TYPE_INVOICE]);
+        $order = $engine->getOrder($orderId);
         $context = $this->getNotificationContext($this->notificationTemplate, $order);
         $engine->sendNotificationMail($orderId, $context, [DocumentRenderer::DOC_TYPE_INVOICE]);
     }

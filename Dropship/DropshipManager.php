@@ -152,14 +152,17 @@ class DropshipManager implements AugmentedObject
     // returns true if dropship status indicates an error
 
     // or if order was cancelled by supplier
-    public function isClarificationRequired(array $order)
+    public function isClarificationRequired(int $orderId)
     {
+        $order = $this->orderTool->getOrder($orderId);
         $status = $order['mxcbc_dsi_status'];
         $isError = $status > DropshipManager::DROPSHIP_STATUS_ERROR;
         return $isError || $status == DropshipManager::DROPSHIP_STATUS_CANCELLED;
     }
-    public function isTrackingDataComplete(array $order)
+
+    public function isTrackingDataComplete(int $orderId)
     {
+        $order = $this->orderTool->getOrder($orderId);
         $orderType = $order['mxcbc_dsi_ordertype'];
         $dropshipStatus = $order['mxcbc_dsi_status'];
 
@@ -248,11 +251,10 @@ class DropshipManager implements AugmentedObject
         return $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
     }
 
-    // Important: order ID is $order['orderID'], e.g. not $order['id']
-    public function sendOrder(array $order)
+    public function sendOrder(int $orderId)
     {
+        $order = $this->orderTool->getOrder($orderId);
         if (! $this->isScheduledOrder($order)) return true;
-        $orderId = $order['orderID'];
         $this->initOrder($orderId);
         // reload order because it may have been modified
         $order = $this->orderTool->getOrder($orderId);
@@ -268,12 +270,12 @@ class DropshipManager implements AugmentedObject
         return $this->setUpdateTrackingDataStatus($order, $context);
     }
 
-    public function getTrackingIds(array $order)
+    protected function getTrackingIds(array $order)
     {
         return $this->events->trigger(__FUNCTION__, $this, ['order' => $order])->toArray();
     }
 
-    public function setTrackingIds(array $order, array $trackingIds)
+    protected function setTrackingIds(array $order, array $trackingIds)
     {
         // create a unique list of all tracking ids from all dropship modules
         $dropshipTrackingIds = [];
