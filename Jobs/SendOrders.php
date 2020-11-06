@@ -2,14 +2,11 @@
 
 namespace MxcDropship\Jobs;
 
-use MxcCommons\EventManager\EventInterface;
-use MxcCommons\EventManager\SharedEventManagerInterface;
 use MxcCommons\Plugin\Service\DatabaseAwareTrait;
 use MxcCommons\Plugin\Service\ServicesAwareTrait;
 use MxcCommons\ServiceManager\AugmentedObject;
 use MxcCommons\Toolbox\Shopware\OrderTool;
 use MxcDropship\Dropship\DropshipManager;
-use MxcVapee\Workflow\WorkflowEngine;
 use Shopware\Models\Order\Status;
 
 class SendOrders implements AugmentedObject

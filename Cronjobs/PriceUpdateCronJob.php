@@ -7,8 +7,6 @@ namespace MxcDropship\Cronjobs;
 use Enlight\Event\SubscriberInterface;
 use MxcCommons\Plugin\Service\Logger;
 use MxcDropship\Dropship\DropshipManager;
-use MxcDropshipIntegrator\Jobs\ApplyPriceRules;
-use MxcDropshipInnocigs\Jobs\UpdatePrices;
 use MxcDropship\MxcDropship;
 use Throwable;
 

@@ -3,12 +3,9 @@
 namespace MxcDropship\Cronjobs;
 
 use Enlight\Event\SubscriberInterface;
-use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Jobs\SendOrders;
 use MxcDropship\MxcDropship;
-use Shopware\Models\Order\Status;
 use Throwable;
-use PDO;
 
 class OrderSendCronJob implements SubscriberInterface
 {
@@ -35,7 +32,6 @@ class OrderSendCronJob implements SubscriberInterface
             if ($log) $log->except($e, false, false);
             $result = 'Exception occured.';
         }
-        // displayed in Backend/Settings/Cronjobs
         return $result;
     }
 }

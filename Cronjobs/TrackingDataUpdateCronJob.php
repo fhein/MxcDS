@@ -7,7 +7,6 @@ namespace MxcDropship\Cronjobs;
 use Enlight\Event\SubscriberInterface;
 use MxcDropship\Jobs\UpdateTrackingData;
 use MxcDropship\MxcDropship;
-use MxcDropshipInnocigs\MxcDropshipInnocigs;
 use Throwable;
 
 class TrackingDataUpdateCronJob implements SubscriberInterface

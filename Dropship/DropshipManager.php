@@ -50,7 +50,6 @@ class DropshipManager implements AugmentedObject
         'ArticleRegistry',
         'ApiClient',
         'OrderProcessor',
-        'DropshippersCompanion',
     ];
 
     // bit flags to mark an order as ownstock or dropship or both

@@ -3,16 +3,8 @@
 namespace MxcDropship\Cronjobs;
 
 use Enlight\Event\SubscriberInterface;
-use MxcCommons\Plugin\Service\LoggerInterface;
-use MxcCommons\Toolbox\Strings\StringTool;
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\MxcDropship;
-use MxcDropshipInnocigs\MxcDropshipInnocigs;
-use MxcDropshipInnocigs\Api\ApiClient;
-use MxcDropshipInnocigs\Article\ArticleRegistry;
-use MxcCommons\Toolbox\Shopware\ArticleTool;
-use Shopware\Models\Article\Detail;
-use Shopware\Models\Plugin\Plugin;
 use Throwable;
 
 class StockUpdateCronJob implements SubscriberInterface
