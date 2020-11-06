@@ -824,10 +824,10 @@ return [
 																			</td>
 																		</tr>
 																		{/if}
-																		{if $margin}
+																		{if $revenue}
 																		<tr>
 																			<td align="center" mc:edit="title1" style="font-size: 28px; font-family: Helvetica, Arial, sans-serif;" class="main-header">
-																				<multiline>Dropship Marge</multiline>
+																				<multiline>Marge-Berechnung</multiline>
 																			</td>
 																		</tr>
 																		<tr>
@@ -836,8 +836,12 @@ return [
 																		<tr>
 																			<td align="center" mc:edit="subtitle1" style="font-size: 15px; font-family: Helvetica, Arial, sans-serif;" class="main-subheader">
 																				<multiline>
-																					Einkaufspreis netto: {$cost} €<br/>
-																					Verkaufspreis netto: {$price} €
+																					Rechnungsbetrag brutto: € {$revenue.amountInvoiced}<br/>
+																					{if $revenue.paypalCost}
+																					Paypal Gebühren: € {$revenue.paypalCost}<br/>
+																					Einnahme brutto: € {$revenue.amountReceived}<br/>
+																					{/if}
+																					<strong>Einnahme netto: € {$revenue.amountReceivedNet}</strong>
 																				</multiline>
 																			</td>
 																		</tr>
@@ -847,12 +851,24 @@ return [
 																	    <tr>
 																			<td align="center" mc:edit="subtitle1" style="font-size: 15px; font-family: Helvetica, Arial, sans-serif;" class="main-subheader">
 																				<multiline>
-																					Erlös netto: {$revenue} €<br/>
-																					<strong>Marge: {$margin} %</strong>
+																					Einkauf Produkte netto: € {$revenue.productCost}<br/>
+																					Versand netto: € {$revenue.shippingCost}<br/>
+																					<strong>Gesamtkosten netto: € {$revenue.totalCost}</strong>
 																				</multiline>
 																			</td>
 																		</tr>
-     
+     																	<tr>
+																			<td height="20"/>
+																		</tr>
+																	    <tr>
+																			<td align="center" mc:edit="subtitle1" style="font-size: 15px; font-family: Helvetica, Arial, sans-serif;" class="main-subheader">
+																				<multiline>
+																			
+																					Erlös netto: € {$revenue.revenue}<br/>
+																					<strong>Marge: {$revenue.margin} %</strong>
+																				</multiline>
+																			</td>
+																		</tr>
 																		<tr>
 																			<td>
 																				<table border="0" width="240" align="center" cellpadding="0" cellspacing="0" class="container">
@@ -871,6 +887,7 @@ return [
 																			</td>
 																		</tr>
 																		{/if}
+
 																	</table>
 																</td>
 															</tr>

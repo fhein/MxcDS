@@ -5,6 +5,17 @@ use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Exception\DropshipException;
 
 return [
+
+    'orderCost' => [
+        'paypal' => [
+            'base' => 0.35,
+            'percentage' => 2.49
+        ],
+        'ownstock' => [
+            'DHL' => 4.15
+        ]
+    ],
+
     'notification_address' => [
         'from' => [
             'name' => 'vapee.de Dropship',

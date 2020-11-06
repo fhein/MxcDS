@@ -53,6 +53,8 @@ class CheckTrackingData extends WorkflowAction
         $engine->sendStatusMail($orderId, $statusId, [DocumentRenderer::DOC_TYPE_INVOICE]);
         $order = $engine->getOrder($orderId);
         $context = $this->getNotificationContext($this->notificationTemplate, $order);
+        $context['revenue'] = $this->dropshipManager->calculateRevenue($orderId);
+
         $engine->sendNotificationMail($orderId, $context, [DocumentRenderer::DOC_TYPE_INVOICE]);
     }
 }

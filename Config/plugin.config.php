@@ -4,7 +4,6 @@ namespace MxcDropship;
 
 use MxcDropship\Dropship\DropshipManager;
 use MxcDropship\Dropship\DropshipLogger;
-use MxcDropship\Dropship\RevenueCalculator;
 use MxcDropship\Jobs\SendOrders;
 use MxcDropship\Jobs\UpdateTrackingData;
 use MxcDropship\Models\DropshipLogEntry;
@@ -63,7 +62,6 @@ return [
             DropshipLogger::class,
             SendOrders::class,
             UpdateTrackingData::class,
-            RevenueCalculator::class,
         ],
     ],
 ];
