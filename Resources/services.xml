@@ -8,11 +8,6 @@
                 <tag name="shopware.event_subscriber"/>
             </service>
 
-            <service id="mxcbc_dropship.subscriber.backend_article"
-                     class="MxcDropship\Subscribers\BackendArticleSubscriber">
-                <tag name="shopware.event_subscriber"/>
-            </service>
-
             <service id="mxcbc_dropship.cronjob.price_update"
                      class="MxcDropship\Cronjobs\PriceUpdateCronJob">
                 <tag name="shopware.event_subscriber"/>

@@ -100,7 +100,6 @@ class BackendOrderSubscriber implements SubscriberInterface
         $params = $args->getSubject()->Request()->getParams();
         $this->dropshipManager->initOrder($params['id']);
 
-        // @todo: Should be attached via SharedEventManager
         if (class_exists(WorkflowEngine::class)) {
             $engine = MxcWorkflow::getServices()->get(WorkflowEngine::class);
             $engine->run();
@@ -110,8 +109,7 @@ class BackendOrderSubscriber implements SubscriberInterface
     // Reinitialize dropship configuration of all open dropship orders if action is getList
     public function onBackendOrderPreDispatch(Enlight_Event_EventArgs $args)
     {
-        $request = $args->getRequest();
-        $action = $request->getActionName();
+        $action = $args->getRequest()->getActionName();
         if ($action != 'getList') return;
         $orderIds = $this->getOpenDropshipOrderIds();
         foreach ($orderIds as $orderId) {
@@ -161,30 +159,33 @@ class BackendOrderSubscriber implements SubscriberInterface
         $context['mxcbc_dsi']['orderType'] = $orderType;
     }
 
-    // this is the backend gui
     public function onBackendOrderPostDispatch(Enlight_Event_EventArgs $args)
     {
         $request = $args->getRequest();
         $action = $request->getActionName();
-
-        if ($action == 'save') {
-            return;
-        }
         $view = $args->getSubject()->View();
-        if ($action == 'getList') {
-            $orderList = $view->getAssign('data');
-            foreach ($orderList as &$order) {
-                $bullet = $this->getBullet($order);
-                $order['mxcbc_dropship_bullet_background_color'] = $bullet['color'];
-                $order['mxcbc_dropship_bullet_title'] = $bullet['message'] ?? '';
-                $order['mxcbc_dsi_status'] = $this->getDropshipStatus($order['id']);
-            }
-            $view->clearAssign('data');
-            $view->assign('data', $orderList);
-        }
 
-        $view->extendsTemplate('backend/mxc_dropship/order/view/detail/overview.js');
-        $view->extendsTemplate('backend/mxc_dropship/order/view/list/list.js');
+        switch ($action) {
+            case 'save':
+                return;
+
+            case 'load':
+                $view->extendsTemplate('backend/mxc_dropship/order/view/detail/overview.js');
+                $view->extendsTemplate('backend/mxc_dropship/order/view/list/list.js');
+                break;
+
+            case 'getList':
+                $orderList = $view->getAssign('data');
+                foreach ($orderList as &$order) {
+                    $bullet = $this->getBullet($order);
+                    $order['mxcbc_dropship_bullet_background_color'] = $bullet['color'];
+                    $order['mxcbc_dropship_bullet_title'] = $bullet['message'] ?? '';
+                    $order['mxcbc_dsi_status'] = $this->getDropshipStatus($order['id']);
+                }
+                $view->clearAssign('data');
+                $view->assign('data', $orderList);
+                break;
+        }
     }
 
     public function getBullet(array $order)
