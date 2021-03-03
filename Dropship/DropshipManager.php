@@ -239,10 +239,16 @@ class DropshipManager implements AugmentedObject
     }
 
     public function isScheduledOrder(array $order) {
-        $isDropshipOrder    = $order['mxcbc_dsi_ordertype'] != DropshipManager::ORDER_TYPE_OWNSTOCK;
-        $dropshipStatusOpen = $order['mxcbc_dsi_status'] == DropshipManager::DROPSHIP_STATUS_OPEN;
-        $isCompletelyPaid   = $order['cleared'] == Status::PAYMENT_STATE_COMPLETELY_PAID;
-        return $isDropshipOrder && $dropshipStatusOpen && $isCompletelyPaid;
+        // return false if this is not a dropship order
+        if ($order['mxcbc_dsi_ordertype'] == DropshipManager::ORDER_TYPE_OWNSTOCK) return false;
+        // return false if the dropship order was already sent
+        if ($order['mxcbc_dsi_status'] != DropshipManager::DROPSHIP_STATUS_OPEN) return false;
+        // return true, if the order was completely paid (Vorkasse, Paypal)
+        if ($order['cleared'] == Status::PAYMENT_STATE_COMPLETELY_PAID) return true;
+        // return true, if the order gets paid via Klarna (see MxcVapee\WorkflowActions\PromoteKlarnaOrders)
+        if ($order['cleared'] == Status::PAYMENT_STATE_PARTIALLY_INVOICED) return true;
+        // return false otherwise
+        return false;
     }
 
     public function getCost(int $orderId)
