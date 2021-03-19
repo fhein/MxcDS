@@ -32,8 +32,8 @@ class SendOrders implements AugmentedObject
         $inProgressOrders = $inProgessOrders ?? $this->orderTool->getOrdersByOrderStatus(Status::ORDER_STATE_IN_PROCESS);
         if (empty($inProgressOrders)) return;
         $dropshipManager = $this->services->get(DropshipManager::class);
-        foreach ($inProgressOrders as $newDropshipOrder) {
-            $dropshipManager->sendOrder($newDropshipOrder);
+        foreach ($inProgressOrders as $orderId) {
+            $dropshipManager->sendOrder($orderId);
         }
     }
 }

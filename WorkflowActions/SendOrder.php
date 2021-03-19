@@ -24,7 +24,11 @@ class SendOrder extends WorkflowAction
 
     public function run(EventInterface $e)
     {
+        $engine = $e->getTarget();
         $orderId = $e->getParam('orderID');
+        $order = $engine->getOrder($orderId);
+        if ($order['status'] != $this->config['statusId']) return;
+
         $this->dropshipManager->sendOrder($orderId);
     }
 }

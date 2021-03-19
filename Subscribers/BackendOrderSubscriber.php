@@ -100,10 +100,12 @@ class BackendOrderSubscriber implements SubscriberInterface
         $params = $args->getSubject()->Request()->getParams();
         $this->dropshipManager->initOrder($params['id']);
 
-        if (class_exists(WorkflowEngine::class)) {
-            $engine = MxcWorkflow::getServices()->get(WorkflowEngine::class);
-            $engine->run();
-        }
+        // immediate workflow disabled because of concurrency with cronjob
+
+//        if (class_exists(WorkflowEngine::class)) {
+//            $engine = MxcWorkflow::getServices()->get(WorkflowEngine::class);
+//            $engine->run();
+//        }
     }
 
     // Reinitialize dropship configuration of all open dropship orders if action is getList
