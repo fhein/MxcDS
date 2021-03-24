@@ -7,11 +7,41 @@ use MxcDropship\Exception\DropshipException;
 return [
 
     'orderCost' => [
-        'paypal' => [
+        // Paypal, Paypal+
+        'SwagPaymentPayPalUnified' => [
+            'provider' => 'Paypal',
             'base' => 0.35,
             'percentage' => 2.49
         ],
-        'ownstock' => [
+        // Klarna Rechnung
+        'bestit_klarna_payments_pay_later' => [
+            'provider' => 'Klarna',
+            'base' => 0.35,
+            'percentage' => 2.99
+        ],
+        // Klarna Ratenkauf
+        'bestit_klarna_payments_slice_it' => [
+            'provider' => 'Klarna',
+            'base' => 0.00,
+            'percentage' => 2.99
+        ],
+        // Klarna Lastschrift
+        'bestit_klarna_payments_direct_debit' => [
+            'provider' => 'Klarna',
+            'base' => 0.20,
+            'percentage' => 1.35
+        ],
+        // Klarna Sofortüberweisung
+        'bestit_klarna_payments_direct_bank_transfer' => [
+            'provider' => 'Klarna',
+            'base' => 0.20,
+            'percentage' => 1.35
+        ],
+        // Vorkasse
+        'prepayment' => [
+            'provider' => 'vapee.de',
+            'base' => 0.0,
+            'percentage' => 0.0,
             'DHL' => 4.15
         ]
     ],

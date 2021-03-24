@@ -617,18 +617,23 @@ class DropshipManager implements AugmentedObject
     {
         $dropshipCost = $this->getCost($orderId);
         $productCost = $this->getOwnStockPositionCost($orderId);
+        // productCost > 0 means we have own shipping costs
         if ($productCost > 0) {
             $dropshipCost[] = [
                 'product' => $productCost,
-                'shipping' => $this->classConfig['orderCost']['ownstock']['DHL']
+                'shipping' => $this->classConfig['orderCost']['prepayment']['DHL']
             ];
         }
-        // calculate paypal cost
+        // calculate payment cost
         $order = $this->orderTool->getOrder($orderId);
-        $paypalCost = $this->getPaypalCost($order);
+
+        $payment = $this->getPaymentCost($order);
+        $paymentCost = $payment['cost'];
+        $paymentProvider = $payment['provider'];
+
         $invoiced = $order['invoice_amount'];
         $vatFactor = 1 + TaxTool::getCurrentVatPercentage() / 100;
-        $received = $invoiced - $paypalCost;
+        $received = $invoiced - $paymentCost;
         $receivedNet = round($received / $vatFactor, 2);
 
         $productCost = 0;
@@ -645,9 +650,10 @@ class DropshipManager implements AugmentedObject
             'shippingCost' => number_format($shippingCost,2, ',', '.'),
             'productCost'  => number_format($productCost,2, ',', '.'),
             'totalCost' => number_format($totalCost,2, ',', '.'),
-            'paypalCost' => number_format($paypalCost,2, ',', '.'),
+            'paymentCost' => number_format($paymentCost,2, ',', '.'),
+            'paymentProvider' => $paymentProvider,
             'amountInvoiced'  => number_format($invoiced,2, ',', '.'),
-            'amountReceived' => number_format($invoiced - $paypalCost,2, ',', '.'),
+            'amountReceived' => number_format($invoiced - $paymentCost,2, ',', '.'),
             'amountReceivedNet' => number_format($receivedNet,2, ',', '.'),
             'margin' => number_format($margin,2, ',', '.'),
             'revenue' => number_format($revenue,2, ',', '.'),
@@ -659,7 +665,7 @@ class DropshipManager implements AugmentedObject
         $shopName = $this->config->get('shopName');
         $details = $this->getSupplierOrderDetails($shopName, $orderId);
 
-        // calculate product cost and shipping cost of order positions coming from own stock
+        // calculate product cost of order positions coming from own stock
         $productCost = 0;
         foreach ($details as $detail) {
             $productInfo = $this->getProductInfo($detail['articleDetailID']);
@@ -668,14 +674,13 @@ class DropshipManager implements AugmentedObject
         return round($productCost,2);
     }
 
-    protected function getPaypalCost(array $order)
+    protected function getPaymentCost(array $order)
     {
-        $paypalCost = 0;
-        if ($this->orderTool->isPaypal($order['paymentID'])) {
-            $paypal = $this->classConfig['orderCost']['paypal'];
-            $paypalCost = $paypal['base'] + $paypal['percentage'] / 100 * $order['invoice_amount'];
-        }
-        return round($paypalCost, 2);
+        $paymentName = $this->orderTool->getPaymentName($order['paymentID']);
+        $costRecord = $this->classConfig['orderCost'][$paymentName];
+        $result['cost'] = $costRecord['base'] + $costRecord['percentage'] / 100 * $order['invoice_amount'];
+        $result['provider'] = $costRecord['provider'];
+        return $result;
     }
 
     private function getProductInfo(int $articleDetailId)
