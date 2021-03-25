@@ -39,10 +39,10 @@ return [
         ],
         // Vorkasse
         'prepayment' => [
-            'provider' => 'vapee.de',
+            'provider' => 'Vorkasse',
             'base' => 0.0,
             'percentage' => 0.0,
-            'DHL' => 4.15
+            'DHL' => 5.86
         ]
     ],
 
