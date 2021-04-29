@@ -80,8 +80,11 @@ class CheckTrackingData extends WorkflowAction
     {
         $this->log->debug('Start Klarna Capture');
         $services = MxcDropship::getServices();
+
+        // Klarna capture
         $calculator = $services->get('bestit_klarna_order_management.components.calculator.calculator');
         $capture = $services->get('bestit_klarna_order_management.components.facade.capture');
+
         $amountCents = $calculator->toCents($amount);
         $result = true;
         try {
@@ -92,6 +95,7 @@ class CheckTrackingData extends WorkflowAction
                 $result = false;
             }
         } catch(Throwable $t) {
+            $this->log->debug('Failed to create capture for Klarna Id: ' . $klarnaId);
             $this->log->except($t, true, false);
             $result = false;
         }
